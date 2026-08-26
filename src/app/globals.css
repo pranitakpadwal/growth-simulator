@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  /* Emerald & Ink */
+  --background: #faf9f6; /* warm off-white */
+  --foreground: #14231d; /* deep green-ink */
+  --surface: #ffffff;
+  --border: #e7e4dc;
+  --muted: #6b7280;
+  --brand: #0b6b4f;
+  --brand-dark: #0b3d2e;
+  --brand-soft: #e9f2ed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-line: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0f0d;
+    --foreground: #e8ece9;
+    --surface: #12161400;
+    --surface: #141a17;
+    --border: #232b27;
+    --muted: #9aa39e;
+    --brand: #2fae86;
+    --brand-dark: #7fd4b6;
+    --brand-soft: #16241d;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Display headings use the serif by default where the class is applied. */
+.font-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+}
