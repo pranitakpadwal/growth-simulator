@@ -64,12 +64,21 @@ export interface BenchmarkMetric {
 // Industry / Goal / Funnel-template catalog — the "clever defaults" layer.
 // ---------------------------------------------------------------------------
 
-export type IndustryId = "personal-loans" | "emi-calculator" | "investments" | "news-app";
+export type IndustryId =
+  | "personal-loans"
+  | "emi-calculator"
+  | "epf"
+  | "credit-cards"
+  | "investments"
+  | "news-app"
+  | "social-app"
+  | "business-app"
+  | "travel-app";
 
 /** Groups drive which channel CPC/CTR benchmark set applies (finance vs. app). */
 export type IndustryGroup = "finance" | "app";
 
-export type GoalId = "lead-gen" | "app-install" | "website-registration" | "website-click";
+export type GoalId = "website-lead-form" | "app-install" | "app-lead-form" | "website-registration" | "website-click";
 
 export interface GoalDefinition {
   id: GoalId;

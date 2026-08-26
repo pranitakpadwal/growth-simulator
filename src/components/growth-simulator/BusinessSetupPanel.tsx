@@ -203,7 +203,9 @@ export default function BusinessSetupPanel({
             className="rounded border border-line bg-background px-2 py-1.5 tabular-nums"
             step="any"
           />
-          <span className="text-xs text-foreground/50">Max ₹ willing to pay per {valueLabel.toLowerCase()}</span>
+          <span className="text-xs text-foreground/50">
+            Max ₹ willing to pay per {valueLabel.toLowerCase().replace(/s$/, "")}
+          </span>
         </label>
       </div>
 

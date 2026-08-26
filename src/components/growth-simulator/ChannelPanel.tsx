@@ -6,6 +6,8 @@ import { runThreePaidScenarios, maxSustainableCpc, costLadder } from "@/lib/grow
 import { formatInrCompact, formatNumber, formatPct } from "@/lib/growth-simulator/format";
 import ScenarioTable from "./ScenarioTable";
 import CostLadder from "./CostLadder";
+import FunnelChart from "./FunnelChart";
+import ScenarioBarChart from "./ScenarioBarChart";
 
 interface Props {
   channelId: ChannelId;
@@ -57,6 +59,16 @@ export default function ChannelPanel({
   const maxCpc = targetCacInr != null ? maxSustainableCpc(template, stageAssumptions, targetCacInr) : null;
   const overTarget = maxCpc != null && cpcValue > maxCpc;
   const rungs = costLadder(cpcValue, template, stageAssumptions);
+
+  const funnelStages = [
+    { label: "Impressions", count: estimatedImpressions },
+    { label: "Clicks", count: estimatedClicks },
+    ...forecasts.base.stages.map((s) => ({
+      label: s.label,
+      count: s.count,
+      isValueStage: s.stageId === template.valueStageId,
+    })),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -114,9 +126,22 @@ export default function ChannelPanel({
         </div>
       )}
 
-      <CostLadder rungs={rungs} cpc={cpcValue} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <FunnelChart stages={funnelStages} />
+        <CostLadder rungs={rungs} cpc={cpcValue} />
+      </div>
 
-      <ScenarioTable forecasts={forecasts} valueLabel={template.valueLabel} hasRevenue={template.hasRevenue} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ScenarioBarChart
+          values={{
+            conservative: forecasts.conservative.valueCount,
+            base: forecasts.base.valueCount,
+            upside: forecasts.upside.valueCount,
+          }}
+          valueLabel={template.valueLabel}
+        />
+        <ScenarioTable forecasts={forecasts} valueLabel={template.valueLabel} hasRevenue={template.hasRevenue} />
+      </div>
     </div>
   );
 }

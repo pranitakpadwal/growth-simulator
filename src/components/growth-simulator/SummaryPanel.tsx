@@ -1,10 +1,12 @@
-import type { ConstraintAssessment } from "@/lib/growth-simulator/types";
+import type { ConstraintAssessment, ScenarioName } from "@/lib/growth-simulator/types";
 import type { ChannelEfficiency } from "@/lib/growth-simulator/engine";
 import { formatInrCompact, formatNumber } from "@/lib/growth-simulator/format";
 import BenchmarkTable, { type BenchmarkRow } from "./BenchmarkTable";
 import ConstraintCard from "./ConstraintCard";
 import ChannelEfficiencyTable from "./ChannelEfficiencyTable";
 import SourceList, { type SourceEntry } from "./SourceList";
+import MediaSplitBar, { type MediaSplitSlice } from "./MediaSplitBar";
+import ScenarioBarChart from "./ScenarioBarChart";
 
 interface Props {
   totalSpendInr: number;
@@ -21,6 +23,8 @@ interface Props {
   efficiencyRows: ChannelEfficiency[];
   benchmarkRows: BenchmarkRow[];
   sources: SourceEntry[];
+  mediaSplit: MediaSplitSlice[];
+  scenarioConversionTotals: Record<ScenarioName, number>;
 }
 
 /** PRD §24 CXO dashboard — the roll-up across every channel tab. */
@@ -39,6 +43,8 @@ export default function SummaryPanel({
   efficiencyRows,
   benchmarkRows,
   sources,
+  mediaSplit,
+  scenarioConversionTotals,
 }: Props) {
   const cacOverTarget = targetCacInr != null && blendedCacInr > targetCacInr;
 
@@ -64,6 +70,11 @@ export default function SummaryPanel({
         {hasRevenue && <SummaryStat label="GEI" value={gei.toFixed(2)} sub="Contribution ₹ per ₹ spent" />}
       </section>
 
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <MediaSplitBar slices={mediaSplit} />
+        <ScenarioBarChart values={scenarioConversionTotals} valueLabel={valueLabel} />
+      </section>
+
       <section>
         <h2 className="font-display text-lg font-semibold text-foreground">Benchmark position</h2>
         <p className="mt-1 text-sm text-foreground/60">
@@ -74,16 +85,17 @@ export default function SummaryPanel({
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <section>
         <ConstraintCard constraints={constraints} bottleneck={bottleneck} />
-        <div>
-          <h3 className="font-display text-lg font-semibold text-foreground">Where should the next rupee go?</h3>
-          <p className="mt-1 text-sm text-foreground/70">
-            Every channel you&apos;ve configured, ranked by contribution produced per rupee spent.
-          </p>
-          <div className="mt-3">
-            <ChannelEfficiencyTable rows={efficiencyRows} hasRevenue={hasRevenue} />
-          </div>
+      </section>
+
+      <section>
+        <h3 className="font-display text-lg font-semibold text-foreground">Where should the next rupee go?</h3>
+        <p className="mt-1 text-sm text-foreground/70">
+          Every channel you&apos;ve configured, ranked by contribution produced per rupee spent.
+        </p>
+        <div className="mt-3">
+          <ChannelEfficiencyTable rows={efficiencyRows} hasRevenue={hasRevenue} />
         </div>
       </section>
 
