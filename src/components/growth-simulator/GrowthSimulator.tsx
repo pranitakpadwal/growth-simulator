@@ -14,7 +14,7 @@ import {
   type ChannelEfficiency,
   type PaidChannelWeight,
 } from "@/lib/growth-simulator/engine";
-import type { ChannelForecast, BudgetCadence } from "@/lib/growth-simulator/types";
+import type { ChannelForecast, BudgetCadence, ScenarioName } from "@/lib/growth-simulator/types";
 import { getAudiencePersona } from "@/lib/growth-simulator/audience";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 import type { BenchmarkRow } from "./BenchmarkTable";
@@ -69,7 +69,7 @@ export default function GrowthSimulator() {
   const [stageAssumptions, setStageAssumptions] = useState(() =>
     initialStageMap(initialTemplate.id, initialTemplate.stages)
   );
-  const [economics, setEconomics] = useState<EconomicsDefaults>(() => defaultEconomics(industryId));
+  const [economics, setEconomics] = useState<EconomicsDefaults>(() => defaultEconomics(industryId, goalId));
   const [organic, setOrganic] = useState({
     seo: { entryVolume: 20000, investmentInr: 0 },
     aso: { entryVolume: 5000, investmentInr: 0 },
@@ -90,7 +90,7 @@ export default function GrowthSimulator() {
     const nextTemplate = resolveFunnelTemplate(id, nextGoalId);
     setIndustryId(nextIndustry.id);
     setGoalId(nextGoalId);
-    setEconomics(defaultEconomics(nextIndustry.id));
+    setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
     setChannelCpc(initialCpcMap(nextIndustry.group));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
@@ -99,6 +99,7 @@ export default function GrowthSimulator() {
   function handleGoalChange(id: string) {
     const nextTemplate = resolveFunnelTemplate(industryId, id);
     setGoalId(id as GoalId);
+    setEconomics(defaultEconomics(industryId, id as GoalId));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(id)[0]?.tab ?? "summary");
   }
@@ -160,8 +161,8 @@ export default function GrowthSimulator() {
     [searchBudget, displayBudget, youtubeBudget, metaBudget, organic]
   );
 
-  const baseForecasts = useMemo(() => {
-    const map: Partial<Record<ChannelId, ChannelForecast>> = {};
+  const allForecasts = useMemo(() => {
+    const map: Partial<Record<ChannelId, Record<ScenarioName, ChannelForecast>>> = {};
     for (const channel of visibleChannels) {
       if (channel.isOrganic) {
         const entryVolume = channel.id === "seo" ? organic.seo.entryVolume : organic.aso.entryVolume;
@@ -174,7 +175,7 @@ export default function GrowthSimulator() {
           revenuePerCustomerInr: economics.revenuePerCustomerInr,
           variableCostPerCustomerInr: economics.variableCostPerCustomerInr,
           contributionMarginPct: economics.contributionMarginPct,
-        }).base;
+        });
       } else {
         map[channel.id] = runThreePaidScenarios({
           channelId: channel.id,
@@ -185,11 +186,20 @@ export default function GrowthSimulator() {
           revenuePerCustomerInr: economics.revenuePerCustomerInr,
           variableCostPerCustomerInr: economics.variableCostPerCustomerInr,
           contributionMarginPct: economics.contributionMarginPct,
-        }).base;
+        });
       }
     }
     return map;
   }, [visibleChannels, channelSpend, organic, channelCpc, template, stageAssumptionsPlain, economics]);
+
+  const baseForecasts = useMemo(() => {
+    const map: Partial<Record<ChannelId, ChannelForecast>> = {};
+    for (const channel of visibleChannels) {
+      const f = allForecasts[channel.id];
+      if (f) map[channel.id] = f.base;
+    }
+    return map;
+  }, [visibleChannels, allForecasts]);
 
   const totals = useMemo(() => {
     let spend = 0;
@@ -213,6 +223,20 @@ export default function GrowthSimulator() {
       gei: spend > 0 ? contribution / spend : 0,
     };
   }, [visibleChannels, baseForecasts]);
+
+  const scenarioConversionTotals = useMemo(() => {
+    const result: Record<ScenarioName, number> = { conservative: 0, base: 0, upside: 0 };
+    for (const channel of visibleChannels) {
+      const f = allForecasts[channel.id];
+      if (!f) continue;
+      result.conservative += f.conservative.valueCount;
+      result.base += f.base.valueCount;
+      result.upside += f.upside.valueCount;
+    }
+    return result;
+  }, [visibleChannels, allForecasts]);
+
+  const mediaSplit = visibleChannels.map((c) => ({ channelId: c.id, spendInr: channelSpend[c.id] ?? 0 }));
 
   const { constraints, bottleneck } = useMemo(
     () => assessConstraints(template, stageAssumptionsPlain),
@@ -407,6 +431,8 @@ export default function GrowthSimulator() {
           efficiencyRows={efficiencyRows}
           benchmarkRows={benchmarkRows}
           sources={sources}
+          mediaSplit={mediaSplit}
+          scenarioConversionTotals={scenarioConversionTotals}
         />
       )}
 
