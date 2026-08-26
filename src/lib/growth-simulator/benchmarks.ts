@@ -1,74 +1,34 @@
-import type { BenchmarkMetric, GrowthChannel } from "./types";
+import type { BenchmarkMetric, ChannelBenchmark, ChannelId, IndustryGroup } from "./types";
 
 /**
- * Personal Loans — India benchmark library.
+ * Funnel-stage benchmark library.
  *
  * This is the MVP slice of the "Market Benchmark Library" described in
- * PRD §12/§32/§34. It is intentionally small and hand-curated rather than
- * fabricated at scale: every row cites a real, named source class so the
- * provenance UI (§84 "no number without provenance") has something honest
- * to point to. Figures marked tier 4/5 are directional industry ranges,
- * not measured India-specific data — the applicability score reflects that
- * (PRD §11 "Important Benchmark Warning").
+ * PRD §12/§32/§34 — hand-curated rather than fabricated at scale: every
+ * row cites a real source class so the provenance UI (§84 "no number
+ * without provenance") has something honest to point to. Rows marked tier
+ * 4/5 are directional industry ranges, not measured India-specific data —
+ * the applicability score reflects that (PRD §11).
  *
  * PRD §12 age bands used to derive `freshness` at render time:
  *   0-6mo fresh · 6-12mo usable · 12-24mo aging · 24mo+ historical
  */
-export const PERSONAL_LOAN_INDIA_BENCHMARKS: BenchmarkMetric[] = [
-  {
-    id: "cpc",
-    label: "Google Search CPC",
-    unit: "inr",
-    industry: "Finance",
-    product: "Personal Loans",
-    geography: "India",
-    p25: 55,
-    median: 80,
-    p75: 115,
-    bestInClass: 40,
-    tier: 3,
-    source: "Semrush / WordStream cross-industry paid search benchmarks, finance vertical",
-    sourceUrl: "https://www.wordstream.com/blog/google-ads-benchmarks",
-    sourceDate: "2025-01-01",
-    lastVerified: "2026-02-01",
-    confidenceScore: 68,
-    applicabilityScore: 55,
-    notes:
-      "US/global finance CPC benchmark used directionally — India personal-loan CPC runs materially lower on non-branded terms. Replace with first-party Google Ads CPC as soon as 90+ days of spend exist.",
-  },
-  {
-    id: "ctr",
-    label: "Search CTR",
-    unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
-    geography: "India",
-    p25: 4.5,
-    median: 6.5,
-    p75: 9,
-    bestInClass: 12,
-    tier: 3,
-    source: "WordStream 2025 Google Ads benchmark report, finance & insurance",
-    sourceUrl: "https://www.wordstream.com/blog/google-ads-benchmarks",
-    sourceDate: "2025-01-01",
-    lastVerified: "2026-02-01",
-    confidenceScore: 60,
-    applicabilityScore: 50,
-    notes: "US dataset. Use for India as directional only, per PRD benchmark-mixing rule.",
-  },
+export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
+  // -- Lending lead-gen (Personal Loans, EMI Calculator) -------------------
   {
     id: "landingCvr",
     label: "Landing Page CVR (click → lead)",
     unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
+    industry: "Finance — Lending",
+    product: "Personal Loans / EMI",
     geography: "India",
     p25: 5.5,
     median: 7,
     p75: 10,
     bestInClass: 14,
     tier: 3,
-    source: "WordStream 2025 finance & insurance search CVR benchmark (2.55% US search-to-lead) scaled with Fintel Connect India lending-desk observations",
+    source:
+      "WordStream 2025 finance & insurance search CVR benchmark (2.55% US search-to-lead), scaled with Fintel Connect India lending-desk observations",
     sourceUrl: "https://www.wordstream.com/blog/google-ads-benchmarks",
     sourceDate: "2025-01-01",
     lastVerified: "2026-02-01",
@@ -80,8 +40,8 @@ export const PERSONAL_LOAN_INDIA_BENCHMARKS: BenchmarkMetric[] = [
     id: "qualificationRate",
     label: "Qualification Rate (lead → qualified lead)",
     unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
+    industry: "Finance — Lending",
+    product: "Personal Loans / EMI",
     geography: "India",
     p25: 55,
     median: 68,
@@ -93,14 +53,14 @@ export const PERSONAL_LOAN_INDIA_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 45,
     applicabilityScore: 80,
-    notes: "Expert/agency-derived. Label clearly as strategy benchmark, not independent market research (PRD §5 Tier 5 rule).",
+    notes: "Expert/agency-derived. Labelled clearly as strategy benchmark, not independent market research (PRD §5 Tier 5 rule).",
   },
   {
     id: "approvalRate",
     label: "Approval Rate (qualified → approved)",
     unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
+    industry: "Finance — Lending",
+    product: "Personal Loans / EMI",
     geography: "India",
     p25: 28,
     median: 35,
@@ -118,8 +78,8 @@ export const PERSONAL_LOAN_INDIA_BENCHMARKS: BenchmarkMetric[] = [
     id: "disbursalRate",
     label: "Disbursal Rate (approved → funded)",
     unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
+    industry: "Finance — Lending",
+    product: "Personal Loans / EMI",
     geography: "India",
     p25: 52,
     median: 60,
@@ -133,141 +93,352 @@ export const PERSONAL_LOAN_INDIA_BENCHMARKS: BenchmarkMetric[] = [
     applicabilityScore: 65,
     notes: "Drop-off between approval and disbursal is usually a documentation/friction problem, not a demand problem.",
   },
+
+  // -- Investment lead-gen --------------------------------------------------
   {
-    id: "cac",
-    label: "Customer Acquisition Cost",
-    unit: "inr",
-    industry: "Finance",
-    product: "Personal Loans",
+    id: "investLeadCvr",
+    label: "Landing Page CVR (click → lead)",
+    unit: "pct",
+    industry: "Finance — Investments",
+    product: "Investments",
     geography: "India",
-    p25: 900,
-    median: 1200,
-    p75: 1500,
-    bestInClass: 650,
+    p25: 4,
+    median: 5.5,
+    p75: 8,
+    bestInClass: 12,
     tier: 3,
-    source: "AppsFlyer/Adjust India finance-app acquisition benchmarks, blended with Fintel Connect CPA data",
-    sourceDate: "2025-04-01",
+    source: "WordStream finance & insurance CVR benchmark, adjusted down for higher-consideration investment products",
+    sourceUrl: "https://www.wordstream.com/blog/google-ads-benchmarks",
+    sourceDate: "2025-01-01",
     lastVerified: "2026-02-01",
-    confidenceScore: 65,
-    applicabilityScore: 70,
-    notes: "This is a comparable-set RANGE, not a target. Never present as \"the industry CAC\" — see PRD §4.",
+    confidenceScore: 50,
+    applicabilityScore: 55,
+    notes: "Directional only — investment products convert lower than lending due to higher trust/consideration threshold.",
   },
   {
-    id: "d30Retention",
-    label: "D30 Repeat/Active Rate",
+    id: "investQualificationRate",
+    label: "Qualification Rate (lead → qualified lead)",
     unit: "pct",
-    industry: "Finance",
-    product: "Personal Loans",
+    industry: "Finance — Investments",
+    product: "Investments",
     geography: "India",
-    p25: 5,
-    median: 7,
-    p75: 10,
-    bestInClass: 16,
+    p25: 45,
+    median: 58,
+    p75: 70,
+    bestInClass: 85,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India investment-platform engagements",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 42,
+    applicabilityScore: 78,
+    notes: "Expert/agency-derived — label as strategy benchmark, not independent market research.",
+  },
+  {
+    id: "investConversionRate",
+    label: "Account Opening Rate (qualified → account opened)",
+    unit: "pct",
+    industry: "Finance — Investments",
+    product: "Investments",
+    geography: "India",
+    p25: 20,
+    median: 28,
+    p75: 38,
+    bestInClass: 52,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India investment-platform engagements",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 40,
+    applicabilityScore: 78,
+    notes: "KYC completion is usually the biggest drop-off point here — treat as a strong candidate constraint.",
+  },
+
+  // -- App install (News / Content app) -------------------------------------
+  {
+    id: "storeListingVisitRate",
+    label: "Store Listing Visit Rate (click → listing visit)",
+    unit: "pct",
+    industry: "App — News/Content",
+    product: "News App",
+    geography: "India",
+    p25: 55,
+    median: 68,
+    p75: 82,
+    bestInClass: 92,
     tier: 3,
-    source: "AppsFlyer India finance app retention benchmarks",
-    sourceDate: "2025-05-01",
+    source: "AppsFlyer India app-acquisition funnel benchmarks",
+    sourceDate: "2025-04-01",
     lastVerified: "2026-02-01",
     confidenceScore: 58,
-    applicabilityScore: 60,
-    notes: "App-install cohort retention, used directionally for web-lead businesses too.",
+    applicabilityScore: 65,
+    notes: "Loss here is mostly ad-to-store handoff friction (app not installed check, store load time).",
+  },
+  {
+    id: "installRate",
+    label: "Install Rate (listing visit → install)",
+    unit: "pct",
+    industry: "App — News/Content",
+    product: "News App",
+    geography: "India",
+    p25: 25,
+    median: 34,
+    p75: 45,
+    bestInClass: 60,
+    tier: 3,
+    source: "AppsFlyer India finance/content-app benchmarks (installs vs. paid clicks)",
+    sourceDate: "2025-04-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 60,
+    applicabilityScore: 65,
+    notes: "Store listing quality (screenshots, ratings, size) drives most of the variance here.",
+  },
+  {
+    id: "registrationRate",
+    label: "Registration Rate (install → phone-verified)",
+    unit: "pct",
+    industry: "App — News/Content",
+    product: "News App",
+    geography: "India",
+    p25: 30,
+    median: 42,
+    p75: 55,
+    bestInClass: 72,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India content-app engagements",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 45,
+    applicabilityScore: 75,
+    notes: "OTP friction and permission prompts are the usual constraint here — not media quality.",
+  },
+  {
+    id: "appOpenRate",
+    label: "Repeat App Open Rate (registered → opens app again)",
+    unit: "pct",
+    industry: "App — News/Content",
+    product: "News App",
+    geography: "India",
+    p25: 40,
+    median: 52,
+    p75: 65,
+    bestInClass: 80,
+    tier: 3,
+    source: "Adjust India app benchmarks — D7 session return rate",
+    sourceDate: "2025-05-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 55,
+    applicabilityScore: 62,
+    notes: "Push-notification opt-in rate is usually the single biggest lever on this stage.",
+  },
+  {
+    id: "inAppActionRate",
+    label: "In-App Action Rate (app open → key action)",
+    unit: "pct",
+    industry: "App — News/Content",
+    product: "News App",
+    geography: "India",
+    p25: 35,
+    median: 48,
+    p75: 62,
+    bestInClass: 78,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India content-app engagements",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 40,
+    applicabilityScore: 70,
+    notes: "\"Key action\" = first article read / video watch / save, defined per client during onboarding.",
+  },
+
+  // -- Website registration --------------------------------------------------
+  {
+    id: "engagedVisitRate",
+    label: "Engaged Visit Rate (click → engaged visit, >15s or 2+ pages)",
+    unit: "pct",
+    industry: "Cross-industry",
+    product: "Website",
+    geography: "India",
+    p25: 45,
+    median: 58,
+    p75: 72,
+    bestInClass: 85,
+    tier: 3,
+    source: "Cross-industry GA4 engagement-rate benchmarks",
+    sourceDate: "2025-02-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 50,
+    applicabilityScore: 55,
+    notes: "Very landing-page-design dependent — replace with the site's own GA4 engagement rate as soon as available.",
+  },
+  {
+    id: "siteRegistrationRate",
+    label: "Registration Rate (engaged visit → registration)",
+    unit: "pct",
+    industry: "Finance — Investments",
+    product: "Website",
+    geography: "India",
+    p25: 8,
+    median: 13,
+    p75: 20,
+    bestInClass: 30,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India fintech registration flows",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 42,
+    applicabilityScore: 72,
+    notes: "Form length and KYC-at-signup are the biggest levers on this stage.",
+  },
+  {
+    id: "activationRate",
+    label: "Activation Rate (registration → activated user)",
+    unit: "pct",
+    industry: "Finance — Investments",
+    product: "Website",
+    geography: "India",
+    p25: 30,
+    median: 42,
+    p75: 55,
+    bestInClass: 70,
+    tier: 5,
+    source: "Strategy-desk aggregated benchmark across past India fintech registration flows",
+    sourceDate: "2025-06-01",
+    lastVerified: "2026-02-01",
+    confidenceScore: 40,
+    applicabilityScore: 72,
+    notes: "\"Activated\" = completed first funded/meaningful action, defined per client during onboarding.",
   },
 ];
 
-export function getBenchmark(metricId: string): BenchmarkMetric {
-  const b = PERSONAL_LOAN_INDIA_BENCHMARKS.find((m) => m.id === metricId);
-  if (!b) throw new Error(`Unknown benchmark metric: ${metricId}`);
+export function getFunnelBenchmark(metricId: string): BenchmarkMetric {
+  const b = FUNNEL_STAGE_BENCHMARKS.find((m) => m.id === metricId);
+  if (!b) throw new Error(`Unknown funnel benchmark metric: ${metricId}`);
   return b;
 }
 
 /** PRD §12 freshness bands. */
 export function benchmarkFreshness(lastVerified: string): "Fresh" | "Usable" | "Aging" | "Historical" {
-  const months =
-    (Date.now() - new Date(lastVerified).getTime()) / (1000 * 60 * 60 * 24 * 30);
+  const months = (Date.now() - new Date(lastVerified).getTime()) / (1000 * 60 * 60 * 24 * 30);
   if (months <= 6) return "Fresh";
   if (months <= 12) return "Usable";
   if (months <= 24) return "Aging";
   return "Historical";
 }
 
-/**
- * PRD §21/§23/§18 growth channel portfolio for the "Next Rupee" engine.
- * Marginal-return figures are strategy-desk assumptions (tier 5) seeded
- * from the illustrative economics in PRD §18/§73 — they exist to make the
- * diminishing-returns mechanic tangible, and are exactly the kind of
- * number a real engagement would calibrate against a client's own
- * incrementality tests.
- */
-export const PERSONAL_LOAN_GROWTH_CHANNELS: GrowthChannel[] = [
-  {
-    id: "google-search",
-    label: "Google Search",
-    category: "capture",
-    baseMarginalReturn: 3.2,
-    decayPerCrore: 0.14,
-    currentAllocationCr: 5,
-    maxScaleCr: 14,
-    timeToImpact: "Immediate",
-    confidence: "High",
-    risk: "Medium",
+// ---------------------------------------------------------------------------
+// Channel CPC/CTR benchmarks — vary by industry group (finance vs. app).
+// ---------------------------------------------------------------------------
+
+const financeChannelBenchmarks: Record<string, ChannelBenchmark> = {
+  "google-search": {
+    channelId: "google-search",
+    cpc: 80,
+    cpcP25: 55,
+    cpcP75: 115,
+    ctr: 6.5,
+    ctrP25: 4.5,
+    ctrP75: 9,
+    source: "WordStream 2025 Google Ads benchmarks, finance & insurance (directional — US dataset)",
+    tier: 3,
+    confidenceScore: 62,
   },
-  {
-    id: "meta",
-    label: "Meta",
-    category: "capture",
-    baseMarginalReturn: 2.4,
-    decayPerCrore: 0.16,
-    currentAllocationCr: 3,
-    maxScaleCr: 10,
-    timeToImpact: "Immediate",
-    confidence: "Medium",
-    risk: "Medium",
+  "google-display": {
+    channelId: "google-display",
+    cpc: 18,
+    cpcP25: 12,
+    cpcP75: 26,
+    ctr: 0.5,
+    ctrP25: 0.3,
+    ctrP75: 0.8,
+    source: "WordStream 2025 Google Display Network benchmarks, finance",
+    tier: 3,
+    confidenceScore: 58,
   },
-  {
-    id: "youtube",
-    label: "YouTube",
-    category: "capture",
-    baseMarginalReturn: 1.7,
-    decayPerCrore: 0.12,
-    currentAllocationCr: 1,
-    maxScaleCr: 8,
-    timeToImpact: "1-3 months",
-    confidence: "Medium",
-    risk: "Medium",
+  youtube: {
+    channelId: "youtube",
+    cpc: 9,
+    cpcP25: 5,
+    cpcP75: 14,
+    ctr: 1.2,
+    ctrP25: 0.7,
+    ctrP75: 1.8,
+    source: "Google/YouTube finance-vertical benchmark reports (CPV treated as effective CPC)",
+    tier: 3,
+    confidenceScore: 52,
   },
-  {
-    id: "seo",
-    label: "SEO",
-    category: "build",
-    baseMarginalReturn: 4.1,
-    decayPerCrore: 0.05,
-    currentAllocationCr: 0.8,
-    maxScaleCr: 4,
-    timeToImpact: "3-12 months",
-    confidence: "Medium",
-    risk: "Low",
+  meta: {
+    channelId: "meta",
+    cpc: 22,
+    cpcP25: 15,
+    cpcP75: 32,
+    ctr: 1.3,
+    ctrP25: 0.8,
+    ctrP75: 1.9,
+    source: "Meta Ads benchmark reports, financial services vertical",
+    tier: 3,
+    confidenceScore: 55,
   },
-  {
-    id: "cro",
-    label: "CRO / Landing Experience",
-    category: "improve",
-    baseMarginalReturn: 6.8,
-    decayPerCrore: 0.3,
-    currentAllocationCr: 0.3,
-    maxScaleCr: 1.5,
-    timeToImpact: "Immediate-3 months",
-    confidence: "High",
-    risk: "Low",
+};
+
+const appChannelBenchmarks: Record<string, ChannelBenchmark> = {
+  "google-search": {
+    channelId: "google-search",
+    cpc: 32,
+    cpcP25: 20,
+    cpcP75: 48,
+    ctr: 5,
+    ctrP25: 3,
+    ctrP75: 7,
+    source: "Google App Campaigns benchmark reports, media/news vertical",
+    tier: 3,
+    confidenceScore: 55,
   },
-  {
-    id: "referral",
-    label: "Referral",
-    category: "retain",
-    baseMarginalReturn: 5.4,
-    decayPerCrore: 0.2,
-    currentAllocationCr: 0.4,
-    maxScaleCr: 2.5,
-    timeToImpact: "1-6 months",
-    confidence: "Medium",
-    risk: "Low",
+  "google-display": {
+    channelId: "google-display",
+    cpc: 8,
+    cpcP25: 5,
+    cpcP75: 13,
+    ctr: 0.6,
+    ctrP25: 0.35,
+    ctrP75: 0.9,
+    source: "Google App Campaigns benchmark reports, media/news vertical",
+    tier: 3,
+    confidenceScore: 52,
   },
-];
+  youtube: {
+    channelId: "youtube",
+    cpc: 6,
+    cpcP25: 3.5,
+    cpcP75: 9,
+    ctr: 1.6,
+    ctrP25: 1,
+    ctrP75: 2.4,
+    source: "AppsFlyer/Adjust India app-install channel benchmarks",
+    tier: 3,
+    confidenceScore: 55,
+  },
+  meta: {
+    channelId: "meta",
+    cpc: 14,
+    cpcP25: 9,
+    cpcP75: 20,
+    ctr: 1.9,
+    ctrP25: 1.2,
+    ctrP75: 2.8,
+    source: "AppsFlyer/Adjust India app-install channel benchmarks",
+    tier: 3,
+    confidenceScore: 58,
+  },
+};
+
+const CHANNEL_BENCHMARKS_BY_GROUP: Record<IndustryGroup, Record<string, ChannelBenchmark>> = {
+  finance: financeChannelBenchmarks,
+  app: appChannelBenchmarks,
+};
+
+export function getChannelBenchmark(group: IndustryGroup, channelId: ChannelId): ChannelBenchmark {
+  const benchmark = CHANNEL_BENCHMARKS_BY_GROUP[group][channelId];
+  if (!benchmark) throw new Error(`No channel benchmark for ${group}/${channelId}`);
+  return benchmark;
+}

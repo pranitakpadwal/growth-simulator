@@ -1,81 +1,153 @@
 import type {
+  ChannelForecast,
+  ChannelId,
   ConstraintAssessment,
-  FunnelForecast,
-  FunnelInputs,
-  GrowthChannel,
-  NextRupeeResult,
+  FunnelStageResult,
+  FunnelTemplate,
   ScenarioMultipliers,
   ScenarioName,
 } from "./types";
-import { getBenchmark } from "./benchmarks";
+import { getFunnelBenchmark } from "./benchmarks";
 
 /**
- * Deterministic forecast + scenario + allocation engine.
+ * Deterministic forecast + scenario + constraint + allocation engine.
  *
  * PRD §45: "The calculation layer should be deterministic. AI should not
  * perform the core calculations... The AI is the strategist interface.
  * The calculation engine is the source of truth." Nothing here calls an
  * LLM or invents a number — every output is a pure function of the inputs
- * passed in, which is what lets an AI layer safely narrate these results.
+ * passed in.
+ *
+ * v2: one generic funnel walker (`runChannelFunnel`) drives every channel
+ * (paid or organic) through whichever `FunnelTemplate` the selected
+ * Industry + Goal resolved to — see catalog.ts.
  */
 
-// PRD §17 scenario types — conservative/base/upside apply directly to the
-// funnel-facing assumptions (PRD §27 "Three Forecast Cases").
+// PRD §17 scenario types — conservative/base/upside apply as one uniform
+// shock to CPC and to every downstream funnel-stage rate, regardless of
+// which template is active (PRD §27 "Three Forecast Cases").
 export const SCENARIO_MULTIPLIERS: Record<ScenarioName, ScenarioMultipliers> = {
-  conservative: { cpc: 1.15, landingCvr: 0.85, approvalRate: 0.9, disbursalRate: 0.9 },
-  base: { cpc: 1, landingCvr: 1, approvalRate: 1, disbursalRate: 1 },
-  upside: { cpc: 0.92, landingCvr: 1.15, approvalRate: 1.08, disbursalRate: 1.05 },
+  conservative: { cpcMult: 1.15, rateMult: 0.85 },
+  base: { cpcMult: 1, rateMult: 1 },
+  upside: { cpcMult: 0.92, rateMult: 1.15 },
 };
 
-/** PRD §14/§15 — the basic funnel forecast model, search → clicks → ... → contribution. */
-export function runFunnelForecast(inputs: FunnelInputs, scenario: ScenarioName): FunnelForecast {
-  const mult = SCENARIO_MULTIPLIERS[scenario];
+export interface RunChannelFunnelParams {
+  channelId: ChannelId;
+  /** Clicks (paid) or the organic-channel equivalent entry volume. */
+  entryCount: number;
+  spendInr: number;
+  template: FunnelTemplate;
+  /** Current value (%) per stage metric id — the editable assumption feeding each stage. */
+  stageAssumptions: Record<string, number>;
+  scenario: ScenarioName;
+  revenuePerCustomerInr: number;
+  variableCostPerCustomerInr: number;
+  contributionMarginPct: number;
+}
 
-  const cpc = inputs.cpc * mult.cpc;
-  const landingCvr = clampPct(inputs.landingCvr * mult.landingCvr);
-  const approvalRate = clampPct(inputs.approvalRate * mult.approvalRate);
-  const disbursalRate = clampPct(inputs.disbursalRate * mult.disbursalRate);
+/** PRD §14/§15 generalized — walks any funnel template from an entry count to its value stage. */
+export function runChannelFunnel(params: RunChannelFunnelParams): ChannelForecast {
+  const { rateMult } = SCENARIO_MULTIPLIERS[params.scenario];
 
-  // Budget is fixed by the user; CPC (which moves per scenario) determines
-  // how many clicks that fixed budget actually buys — this is what makes
-  // "what if CPC rises 20%?" bite in the forecast rather than being cosmetic.
-  const clicksFromBudget = inputs.budgetInr / Math.max(cpc, 1);
-  const clicksFromReach = inputs.addressableImpressions * (inputs.ctr / 100);
-  const clicks = Math.min(clicksFromBudget, clicksFromReach);
-  const spendInr = clicks * cpc;
+  const stages: FunnelStageResult[] = [];
+  let count = params.entryCount;
+  for (const stageTemplate of params.template.stages) {
+    const rate = clampPct((params.stageAssumptions[stageTemplate.metricId] ?? 0) * rateMult);
+    count = count * (rate / 100);
+    stages.push({ stageId: stageTemplate.id, label: stageTemplate.label, count, rate });
+  }
 
-  const leads = clicks * (landingCvr / 100);
-  const qualifiedLeads = leads * (inputs.qualificationRate / 100);
-  const approvedCustomers = qualifiedLeads * (approvalRate / 100);
-  const fundedCustomers = approvedCustomers * (disbursalRate / 100);
+  const valueStage = stages.find((s) => s.stageId === params.template.valueStageId);
+  const valueCount = valueStage?.count ?? 0;
 
-  const revenueInr = fundedCustomers * inputs.revenuePerCustomerInr;
-  const grossContribution = revenueInr * (inputs.contributionMarginPct / 100);
-  const contributionInr =
-    grossContribution - spendInr - fundedCustomers * inputs.variableCostPerCustomerInr;
+  const cacInr = params.spendInr > 0 && valueCount > 0 ? params.spendInr / valueCount : 0;
 
-  const cacInr = fundedCustomers > 0 ? spendInr / fundedCustomers : 0;
+  let revenueInr = 0;
+  let contributionInr = -params.spendInr;
+  if (params.template.hasRevenue) {
+    revenueInr = valueCount * params.revenuePerCustomerInr;
+    const grossContribution = revenueInr * (params.contributionMarginPct / 100);
+    contributionInr = grossContribution - params.spendInr - valueCount * params.variableCostPerCustomerInr;
+  }
 
   return {
-    scenario,
-    clicks,
-    spendInr,
-    leads,
-    qualifiedLeads,
-    approvedCustomers,
-    fundedCustomers,
+    channelId: params.channelId,
+    scenario: params.scenario,
+    entryCount: params.entryCount,
+    spendInr: params.spendInr,
+    stages,
+    valueCount,
+    cacInr,
     revenueInr,
     contributionInr,
-    cacInr,
   };
 }
 
-export function runThreeCaseForecast(inputs: FunnelInputs): Record<ScenarioName, FunnelForecast> {
-  return {
-    conservative: runFunnelForecast(inputs, "conservative"),
-    base: runFunnelForecast(inputs, "base"),
-    upside: runFunnelForecast(inputs, "upside"),
-  };
+const SCENARIOS: ScenarioName[] = ["conservative", "base", "upside"];
+
+export interface PaidChannelParams
+  extends Omit<RunChannelFunnelParams, "scenario" | "entryCount"> {
+  /** Base CPC before any scenario shock — clicks are re-derived per scenario from spend/CPC. */
+  baseCpc: number;
+}
+
+/**
+ * Three-case forecast for a PAID channel. Unlike organic channels, a paid
+ * channel's entry count (clicks) isn't fixed across scenarios — it's
+ * spend ÷ CPC, and CPC itself moves with the scenario (PRD §16 "what if
+ * CPC rises 20%?"), so entry count has to be re-derived per scenario
+ * rather than shocked directly.
+ */
+export function runThreePaidScenarios(params: PaidChannelParams): Record<ScenarioName, ChannelForecast> {
+  const result = {} as Record<ScenarioName, ChannelForecast>;
+  for (const scenario of SCENARIOS) {
+    const cpc = params.baseCpc * SCENARIO_MULTIPLIERS[scenario].cpcMult;
+    const entryCount = cpc > 0 ? params.spendInr / cpc : 0;
+    result[scenario] = runChannelFunnel({ ...params, entryCount, scenario });
+  }
+  return result;
+}
+
+/**
+ * Three-case forecast for an ORGANIC channel (SEO/ASO) — entry volume is a
+ * user estimate held constant across scenarios (no CPC to shock); only the
+ * downstream funnel rates move.
+ */
+export function runThreeOrganicScenarios(
+  params: Omit<RunChannelFunnelParams, "scenario">
+): Record<ScenarioName, ChannelForecast> {
+  const result = {} as Record<ScenarioName, ChannelForecast>;
+  for (const scenario of SCENARIOS) {
+    result[scenario] = runChannelFunnel({ ...params, scenario });
+  }
+  return result;
+}
+
+/**
+ * PRD §51-style back-solve: given a target CAC and the current downstream
+ * funnel rates, what's the most this channel can afford to pay per click
+ * and still land at (or under) that CAC?
+ *
+ * CAC = spend / valueCount = (entry × cpc) / (entry × cumulativeRate)
+ *     = cpc / cumulativeRate
+ * ⇒ maxCpc = targetCac × cumulativeRate
+ *
+ * `cumulativeRate` only multiplies stages up to and including the value
+ * stage — stages after it (e.g. app-open, in-app-action, which sit past
+ * "registration" in the app-install template) don't affect acquisition cost.
+ */
+export function maxSustainableCpc(
+  template: FunnelTemplate,
+  stageAssumptions: Record<string, number>,
+  targetCacInr: number
+): number {
+  let cumulativeRate = 1;
+  for (const stage of template.stages) {
+    cumulativeRate *= (stageAssumptions[stage.metricId] ?? 0) / 100;
+    if (stage.id === template.valueStageId) break;
+  }
+  return targetCacInr * cumulativeRate;
 }
 
 /**
@@ -84,32 +156,17 @@ export function runThreeCaseForecast(inputs: FunnelInputs): Record<ScenarioName,
  * the bottleneck the recommendation engine should target before telling
  * anyone to spend more media budget.
  */
-export function assessConstraints(inputs: FunnelInputs): {
-  constraints: ConstraintAssessment[];
-  bottleneck: ConstraintAssessment;
-} {
-  const checks: Array<{ metricId: string; label: string; companyValue: number }> = [
-    { metricId: "cpc", label: "Google Search CPC", companyValue: inputs.cpc },
-    { metricId: "landingCvr", label: "Landing Page CVR", companyValue: inputs.landingCvr },
-    {
-      metricId: "qualificationRate",
-      label: "Qualification Rate",
-      companyValue: inputs.qualificationRate,
-    },
-    { metricId: "approvalRate", label: "Approval Rate", companyValue: inputs.approvalRate },
-    { metricId: "disbursalRate", label: "Disbursal Rate", companyValue: inputs.disbursalRate },
-  ];
-
-  const constraints: ConstraintAssessment[] = checks.map(({ metricId, label, companyValue }) => {
-    const benchmark = getBenchmark(metricId);
-    // CPC is a cost metric — being "below benchmark" is good, so its gap
-    // sign is inverted relative to the conversion-rate metrics.
-    const isCostMetric = metricId === "cpc";
-    const rawGapPct = ((companyValue - benchmark.median) / benchmark.median) * 100;
-    const gapPct = isCostMetric ? -rawGapPct : rawGapPct;
+export function assessConstraints(
+  template: FunnelTemplate,
+  stageAssumptions: Record<string, number>
+): { constraints: ConstraintAssessment[]; bottleneck: ConstraintAssessment } {
+  const constraints: ConstraintAssessment[] = template.stages.map((stage) => {
+    const benchmark = getFunnelBenchmark(stage.metricId);
+    const companyValue = stageAssumptions[stage.metricId] ?? 0;
+    const gapPct = ((companyValue - benchmark.median) / benchmark.median) * 100;
     return {
-      metricId,
-      label,
+      metricId: stage.metricId,
+      label: stage.label,
       companyValue,
       benchmarkMedian: benchmark.median,
       gapPct,
@@ -123,59 +180,46 @@ export function assessConstraints(inputs: FunnelInputs): {
   return { constraints, bottleneck: worst };
 }
 
+export interface ChannelEfficiency {
+  channelId: ChannelId;
+  isOrganic: boolean;
+  spendInr: number;
+  contributionInr: number;
+  valueCount: number;
+  cacInr: number;
+  /** Contribution ₹ per ₹ spent — null for organic channels (no spend to divide by). */
+  efficiency: number | null;
+}
+
 /**
- * PRD §18/§48 "Next Rupee" engine — models diminishing marginal returns
- * per channel and ranks channels by the value the NEXT ₹1 crore would
- * produce, not by historical CAC or cumulative ROAS.
+ * PRD §18 "Next Rupee" idea, computed from REAL current inputs rather than
+ * an illustrative decay curve: ranks channels by contribution produced per
+ * rupee actually spent this period. A channel with zero spend this period
+ * (organic with no content/ASO investment entered) has no ratio to rank by
+ * and sorts by absolute contribution instead — still worth investing in,
+ * just not comparable on a ₹-in/₹-out basis until an investment is entered.
  */
-export function computeNextRupee(channels: GrowthChannel[]): NextRupeeResult[] {
-  return channels
-    .map((channel) => {
-      const cumulativeValueAtCurrentAllocation = marginalValueCurve(
-        channel,
-        0,
-        channel.currentAllocationCr
-      );
-      const nextCroreMarginalValue =
-        channel.currentAllocationCr >= channel.maxScaleCr
-          ? 0
-          : valueAtCrore(channel, channel.currentAllocationCr);
-      return { ...channel, nextCroreMarginalValue, cumulativeValueAtCurrentAllocation };
-    })
-    .sort((a, b) => b.nextCroreMarginalValue - a.nextCroreMarginalValue);
-}
+export function rankChannelEfficiency(
+  forecasts: Array<{ channelId: ChannelId; isOrganic: boolean; forecast: ChannelForecast }>
+): ChannelEfficiency[] {
+  const rows: ChannelEfficiency[] = forecasts.map(({ channelId, isOrganic, forecast }) => ({
+    channelId,
+    isOrganic,
+    spendInr: forecast.spendInr,
+    contributionInr: forecast.contributionInr,
+    valueCount: forecast.valueCount,
+    cacInr: forecast.cacInr,
+    efficiency: forecast.spendInr > 0 ? forecast.contributionInr / forecast.spendInr : null,
+  }));
 
-/** ₹ return produced by the crore-increment starting at `fromCr`. */
-function valueAtCrore(channel: GrowthChannel, fromCr: number): number {
-  const decayedReturn =
-    channel.baseMarginalReturn * Math.pow(1 - channel.decayPerCrore, Math.floor(fromCr));
-  return Math.max(decayedReturn, 0);
-}
-
-/** Integrates the marginal-return curve (in whole-crore steps) between two allocation levels. */
-function marginalValueCurve(channel: GrowthChannel, fromCr: number, toCr: number): number {
-  let total = 0;
-  for (let cr = fromCr; cr < toCr; cr += 1) {
-    total += valueAtCrore(channel, cr);
-  }
-  return total;
-}
-
-/** PRD §19 Growth Efficiency Index — the single executive roll-up metric. */
-export function computeGEI(incrementalContributionInr: number, incrementalInvestmentInr: number): number {
-  if (incrementalInvestmentInr <= 0) return 0;
-  return incrementalContributionInr / incrementalInvestmentInr;
-}
-
-/** PRD §51 sensitivity analysis — recompute the base forecast under a stepped +/- shock to one input. */
-export function runSensitivity(
-  inputs: FunnelInputs,
-  field: "cpc" | "landingCvr" | "budgetInr",
-  stepsPct: number[]
-): Array<{ shockPct: number; forecast: FunnelForecast }> {
-  return stepsPct.map((shockPct) => {
-    const shocked: FunnelInputs = { ...inputs, [field]: inputs[field] * (1 + shockPct / 100) };
-    return { shockPct, forecast: runFunnelForecast(shocked, "base") };
+  // Channels with a spend/contribution ratio sort by that ratio first (highest
+  // return per rupee wins); channels with no spend this period (organic with
+  // no content/ASO investment entered) sort among themselves by absolute
+  // contribution, and always trail the ratio-comparable channels.
+  return rows.sort((a, b) => {
+    if (a.efficiency !== null && b.efficiency !== null) return b.efficiency - a.efficiency;
+    if (a.efficiency === null && b.efficiency === null) return b.contributionInr - a.contributionInr;
+    return a.efficiency === null ? 1 : -1;
   });
 }
 

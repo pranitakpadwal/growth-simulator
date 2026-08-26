@@ -12,6 +12,12 @@
  * Nothing in this module is an LLM call — this is the deterministic
  * "source of truth" layer the PRD (§45/§72) insists sit under any AI
  * explanation surface.
+ *
+ * v2: the funnel is no longer hardcoded to personal loans. A `FunnelTemplate`
+ * (a generic ordered list of conversion stages) is selected from the user's
+ * Industry + Goal, and every channel — paid or organic — feeds the same
+ * template starting from an entry count. That's what lets one engine cover
+ * "personal loan lead gen" and "news app installs" alike.
  */
 
 /** PRD §5 — five-level benchmark hierarchy, highest priority first. */
@@ -49,76 +55,134 @@ export interface BenchmarkMetric {
   lastVerified: string; // ISO date we last checked this figure still holds
   /** 0-100, per PRD §8 scoring model (source quality/sample/recency/geo/category/funnel match). */
   confidenceScore: number;
-  /** 0-100, per PRD §9 — how applicable this benchmark is to an India personal-loan business specifically. */
+  /** 0-100, per PRD §9 — how applicable this benchmark is to an India business in this vertical. */
   applicabilityScore: number;
   notes: string;
 }
 
-/** A funnel-stage assumption the engine consumes — always paired with its benchmark. */
-export interface FunnelAssumption {
+// ---------------------------------------------------------------------------
+// Industry / Goal / Funnel-template catalog — the "clever defaults" layer.
+// ---------------------------------------------------------------------------
+
+export type IndustryId = "personal-loans" | "emi-calculator" | "investments" | "news-app";
+
+/** Groups drive which channel CPC/CTR benchmark set applies (finance vs. app). */
+export type IndustryGroup = "finance" | "app";
+
+export type GoalId = "lead-gen" | "app-install" | "website-registration" | "website-click";
+
+export interface GoalDefinition {
+  id: GoalId;
+  label: string;
+  description: string;
+  funnelTemplateId: string;
+}
+
+export interface IndustryDefinition {
+  id: IndustryId;
+  label: string;
+  group: IndustryGroup;
+  /** The goal we pre-select for this industry — still fully overridable. */
+  defaultGoalId: GoalId;
+  /** Which goals make sense to offer for this industry. */
+  goalIds: GoalId[];
+}
+
+/** One stage in a funnel template — converts FROM the previous stage's count. */
+export interface FunnelStageTemplate {
+  id: string;
+  label: string;
+  /** Benchmark metric id supplying this stage's conversion rate. */
   metricId: string;
-  /** The value actually used in calculations. Starts equal to the benchmark median. */
-  value: number;
-  /** Where `value` currently came from. Flips to "actual" the moment a user overrides it. */
-  valueClass: ValueClass;
+}
+
+export interface FunnelTemplate {
+  id: string;
+  label: string;
+  /** Ordered stages applied to the entry count (clicks, or an organic-channel equivalent). */
+  stages: FunnelStageTemplate[];
+  /** Which stage's count represents a "conversion" for CAC / revenue purposes. */
+  valueStageId: string;
+  /** Whether this goal has a revenue/contribution model at all (website-click does not). */
+  hasRevenue: boolean;
+  valueLabel: string; // e.g. "Funded customers", "Registered users", "Engaged visits"
+}
+
+// ---------------------------------------------------------------------------
+// Channels
+// ---------------------------------------------------------------------------
+
+export type ChannelId = "google-search" | "google-display" | "youtube" | "meta" | "seo" | "aso";
+export type ChannelTabId = "google" | "meta" | "seo" | "aso";
+
+export interface ChannelMeta {
+  id: ChannelId;
+  label: string;
+  tab: ChannelTabId;
+  isOrganic: boolean;
+  /** ASO only applies when the goal is App Install. */
+  appOnly?: boolean;
+}
+
+/** Paid-channel CPC/CTR benchmark, varies by industry group. */
+export interface ChannelBenchmark {
+  channelId: ChannelId;
+  cpc: number; // ₹ per click
+  cpcP25: number;
+  cpcP75: number;
+  ctr: number; // % impression -> click
+  ctrP25: number;
+  ctrP75: number;
+  source: string;
+  tier: BenchmarkTier;
+  confidenceScore: number;
 }
 
 export type ScenarioName = "conservative" | "base" | "upside";
 
+/** Uniform per-scenario shock, applied to every channel's CPC and every funnel stage rate. */
 export interface ScenarioMultipliers {
-  cpc: number; // multiplies CPC
-  landingCvr: number; // multiplies landing-page CVR
-  approvalRate: number; // multiplies approval rate
-  disbursalRate: number; // multiplies disbursal rate
+  cpcMult: number;
+  rateMult: number;
 }
 
-export interface FunnelInputs {
-  budgetInr: number;
+export type BudgetCadence = "monthly" | "daily";
+
+/** A per-stage assumption value plus where it came from — keyed by stage/metric id. */
+export interface StageAssumption {
+  metricId: string;
+  value: number; // %
+  valueClass: ValueClass;
+}
+
+export interface ChannelInputs {
+  channelId: ChannelId;
+  /** Paid channels: ₹/month allocated. Organic channels: 0 (spend-free). */
+  monthlySpendInr: number;
+  /** Paid channels: CPC. Organic channels: unused (entry count given directly). */
   cpc: number;
-  ctr: number; // impression -> click
-  addressableImpressions: number; // reach available at this budget/market
-  landingCvr: number; // click -> lead
-  qualificationRate: number; // lead -> qualified lead
-  approvalRate: number; // qualified -> approved
-  disbursalRate: number; // approved -> funded/disbursed
-  revenuePerCustomerInr: number;
-  variableCostPerCustomerInr: number;
-  contributionMarginPct: number; // applied to revenue before variable cost/media
+  cpcValueClass: ValueClass;
+  /** Organic-only: user's estimate of monthly entry volume (clicks / store visits). */
+  organicEntryVolume?: number;
 }
 
-export interface FunnelForecast {
+export interface FunnelStageResult {
+  stageId: string;
+  label: string;
+  count: number;
+  rate: number; // % applied to reach this stage from the previous one
+}
+
+export interface ChannelForecast {
+  channelId: ChannelId;
   scenario: ScenarioName;
-  clicks: number;
+  entryCount: number; // clicks, or organic-equivalent entries
   spendInr: number;
-  leads: number;
-  qualifiedLeads: number;
-  approvedCustomers: number;
-  fundedCustomers: number;
+  stages: FunnelStageResult[];
+  valueCount: number; // count at the template's valueStageId
+  cacInr: number; // spend / valueCount (organic channels: 0 spend -> 0 CAC)
   revenueInr: number;
   contributionInr: number;
-  cacInr: number;
-}
-
-export interface GrowthChannel {
-  id: string;
-  label: string;
-  category: "capture" | "build" | "improve" | "retain" | "defend";
-  /** ₹ of incremental contribution per ₹1 invested, for the FIRST ₹1 crore. */
-  baseMarginalReturn: number;
-  /** Fraction the marginal return decays by for every additional ₹1 crore invested (diminishing returns, PRD §48). */
-  decayPerCrore: number;
-  /** Crores already allocated in the current plan. */
-  currentAllocationCr: number;
-  /** Crores beyond which the channel can't realistically absorb more spend. */
-  maxScaleCr: number;
-  timeToImpact: string;
-  confidence: "Low" | "Medium" | "High";
-  risk: "Low" | "Medium" | "High";
-}
-
-export interface NextRupeeResult extends GrowthChannel {
-  nextCroreMarginalValue: number;
-  cumulativeValueAtCurrentAllocation: number;
 }
 
 export interface ConstraintAssessment {
