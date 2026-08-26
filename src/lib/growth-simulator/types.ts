@@ -99,7 +99,10 @@ export type GoalId =
   | "in-app-purchase"
   | "use-calculator"
   | "website-registration"
-  | "website-click";
+  | "website-click"
+  | "website-purchase"
+  | "click-to-call"
+  | "app-reengagement";
 
 export interface GoalDefinition {
   id: GoalId;
@@ -144,7 +147,15 @@ export interface FunnelTemplate {
 // Channels
 // ---------------------------------------------------------------------------
 
-export type ChannelId = "google-search" | "google-display" | "youtube" | "meta" | "seo" | "aso";
+export type ChannelId =
+  | "google-search"
+  | "google-display"
+  | "youtube"
+  | "google-uac"
+  | "facebook"
+  | "instagram"
+  | "seo"
+  | "aso";
 export type ChannelTabId = "google" | "meta" | "seo" | "aso";
 
 export interface ChannelMeta {

@@ -44,22 +44,46 @@ export interface RunChannelFunnelParams {
   revenuePerCustomerInr: number;
   variableCostPerCustomerInr: number;
   contributionMarginPct: number;
+  /**
+   * Organic channels only: skip the shared per-stage benchmark walk and go
+   * straight from entry count to the value stage at this blended rate
+   * instead. Organic traffic quality varies enormously by intent (a
+   * commercial landing page vs. a branding-only blog post) in a way the
+   * shared paid-channel funnel assumptions don't capture — this lets SEO/
+   * ASO be modelled at whatever conversion quality the user actually has
+   * data for, without forking into a separate template per intent.
+   */
+  overrideConversionRatePct?: number;
 }
 
 /** PRD §14/§15 generalized — walks any funnel template from an entry count to its value stage. */
 export function runChannelFunnel(params: RunChannelFunnelParams): ChannelForecast {
   const { rateMult } = SCENARIO_MULTIPLIERS[params.scenario];
 
-  const stages: FunnelStageResult[] = [];
-  let count = params.entryCount;
-  for (const stageTemplate of params.template.stages) {
-    const rate = clampPct((params.stageAssumptions[stageTemplate.metricId] ?? 0) * rateMult);
-    count = count * (rate / 100);
-    stages.push({ stageId: stageTemplate.id, label: stageTemplate.label, count, rate });
-  }
+  let stages: FunnelStageResult[];
+  let valueCount: number;
 
-  const valueStage = stages.find((s) => s.stageId === params.template.valueStageId);
-  const valueCount = valueStage?.count ?? 0;
+  if (params.overrideConversionRatePct != null) {
+    const rate = clampPct(params.overrideConversionRatePct * rateMult);
+    valueCount = params.entryCount * (rate / 100);
+    stages = [
+      {
+        stageId: params.template.valueStageId,
+        label: params.template.valueLabel,
+        count: valueCount,
+        rate,
+      },
+    ];
+  } else {
+    stages = [];
+    let count = params.entryCount;
+    for (const stageTemplate of params.template.stages) {
+      const rate = clampPct((params.stageAssumptions[stageTemplate.metricId] ?? 0) * rateMult);
+      count = count * (rate / 100);
+      stages.push({ stageId: stageTemplate.id, label: stageTemplate.label, count, rate });
+    }
+    valueCount = stages.find((s) => s.stageId === params.template.valueStageId)?.count ?? 0;
+  }
 
   const cacInr = params.spendInr > 0 && valueCount > 0 ? params.spendInr / valueCount : 0;
 

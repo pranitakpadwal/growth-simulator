@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import type { ChannelId, ChannelTabId, GoalId, IndustryId, Platform, ValueClass } from "@/lib/growth-simulator/types";
-import { INDUSTRIES, channelsForGoal, getChannel, getIndustry, goalsForPlatform, resolveFunnelTemplate } from "@/lib/growth-simulator/catalog";
+import {
+  INDUSTRIES,
+  channelsForGoal,
+  getChannel,
+  getIndustry,
+  goalsForPlatform,
+  isGoogleUacGoal,
+  resolveFunnelTemplate,
+} from "@/lib/growth-simulator/catalog";
 import { getChannelBenchmark, getFunnelBenchmark } from "@/lib/growth-simulator/benchmarks";
 import { defaultEconomics, type EconomicsDefaults } from "@/lib/growth-simulator/defaults";
 import {
@@ -24,7 +32,7 @@ import ChannelPanel from "./ChannelPanel";
 import OrganicChannelPanel from "./OrganicChannelPanel";
 import SummaryPanel from "./SummaryPanel";
 
-const PAID_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display", "youtube", "meta"];
+const PAID_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display", "youtube", "google-uac", "facebook", "instagram"];
 
 function initialCpcMap(group: "finance" | "app"): Record<ChannelId, { value: number; valueClass: ValueClass }> {
   const map = {} as Record<ChannelId, { value: number; valueClass: ValueClass }>;
@@ -40,6 +48,13 @@ function initialStageMap(templateId: string, stages: { metricId: string }[]): Re
     map[stage.metricId] = { value: getFunnelBenchmark(stage.metricId).median, valueClass: "benchmark" };
   }
   return map;
+}
+
+interface OrganicState {
+  entryVolume: number;
+  investmentInr: number;
+  overrideEnabled: boolean;
+  overrideRatePct: number;
 }
 
 const TAB_LABEL: Record<ChannelTabId | "summary", string> = {
@@ -65,6 +80,7 @@ export default function GrowthSimulator() {
   const [searchPct, setSearchPct] = useState(55);
   const [displayPct, setDisplayPct] = useState(20);
   const [youtubePct, setYoutubePct] = useState(25);
+  const [facebookPct, setFacebookPct] = useState(60);
   const [activeTab, setActiveTab] = useState<ChannelTabId | "summary">("google");
 
   const initialTemplate = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
@@ -73,15 +89,16 @@ export default function GrowthSimulator() {
     initialStageMap(initialTemplate.id, initialTemplate.stages)
   );
   const [economics, setEconomics] = useState<EconomicsDefaults>(() => defaultEconomics(industryId, goalId));
-  const [organic, setOrganic] = useState({
-    seo: { entryVolume: 20000, investmentInr: 0 },
-    aso: { entryVolume: 5000, investmentInr: 0 },
+  const [organic, setOrganic] = useState<{ seo: OrganicState; aso: OrganicState }>({
+    seo: { entryVolume: 20000, investmentInr: 0, overrideEnabled: false, overrideRatePct: 5 },
+    aso: { entryVolume: 5000, investmentInr: 0, overrideEnabled: false, overrideRatePct: 8 },
   });
   const [audience, setAudience] = useState<AudiencePersona>(() => getAudiencePersona(industryId));
 
   const industry = useMemo(() => getIndustry(industryId), [industryId]);
   const availableGoals = useMemo(() => goalsForPlatform(industry, platform), [industry, platform]);
   const template = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
+  const usesGoogleUac = isGoogleUacGoal(goalId);
   const visibleChannels = useMemo(() => channelsForGoal(goalId), [goalId]);
   const visibleTabs = useMemo(() => {
     const tabs = Array.from(new Set(visibleChannels.map((c) => c.tab)));
@@ -129,6 +146,10 @@ export default function GrowthSimulator() {
     setChannelCpc((prev) => ({ ...prev, [channelId]: { value, valueClass: "actual" } }));
   }
 
+  function setOrganicField<K extends keyof OrganicState>(key: "seo" | "aso", field: K, value: OrganicState[K]) {
+    setOrganic((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
+  }
+
   const targetCacInr = targetCacInput.trim() === "" ? null : Number(targetCacInput);
 
   const stageAssumptionsPlain = useMemo(() => {
@@ -137,12 +158,30 @@ export default function GrowthSimulator() {
     return plain;
   }, [stageAssumptions]);
 
-  const subSplitSum = searchPct + displayPct + youtubePct || 1;
+  const googleSubSplitSum = searchPct + displayPct + youtubePct || 1;
   const channelWeights: PaidChannelWeight[] = [
-    { channelId: "google-search", cpc: channelCpc["google-search"].value, sharePct: googlePct * (searchPct / subSplitSum) },
-    { channelId: "google-display", cpc: channelCpc["google-display"].value, sharePct: googlePct * (displayPct / subSplitSum) },
-    { channelId: "youtube", cpc: channelCpc.youtube.value, sharePct: googlePct * (youtubePct / subSplitSum) },
-    { channelId: "meta", cpc: channelCpc.meta.value, sharePct: 100 - googlePct },
+    {
+      channelId: "google-search",
+      cpc: channelCpc["google-search"].value,
+      sharePct: usesGoogleUac ? 0 : googlePct * (searchPct / googleSubSplitSum),
+    },
+    {
+      channelId: "google-display",
+      cpc: channelCpc["google-display"].value,
+      sharePct: usesGoogleUac ? 0 : googlePct * (displayPct / googleSubSplitSum),
+    },
+    {
+      channelId: "youtube",
+      cpc: channelCpc.youtube.value,
+      sharePct: usesGoogleUac ? 0 : googlePct * (youtubePct / googleSubSplitSum),
+    },
+    { channelId: "google-uac", cpc: channelCpc["google-uac"].value, sharePct: usesGoogleUac ? googlePct : 0 },
+    { channelId: "facebook", cpc: channelCpc.facebook.value, sharePct: (100 - googlePct) * (facebookPct / 100) },
+    {
+      channelId: "instagram",
+      cpc: channelCpc.instagram.value,
+      sharePct: (100 - googlePct) * ((100 - facebookPct) / 100),
+    },
   ];
 
   const { requiredBudgetInr, blendedCacInr } = useMemo(
@@ -154,7 +193,18 @@ export default function GrowthSimulator() {
         channelWeights,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [targetConversionsInput, template, stageAssumptionsPlain, channelCpc, googlePct, searchPct, displayPct, youtubePct]
+    [
+      targetConversionsInput,
+      template,
+      stageAssumptionsPlain,
+      channelCpc,
+      googlePct,
+      searchPct,
+      displayPct,
+      youtubePct,
+      facebookPct,
+      usesGoogleUac,
+    ]
   );
 
   const monthlyBudgetInr =
@@ -162,36 +212,43 @@ export default function GrowthSimulator() {
 
   const googleBudget = monthlyBudgetInr * (googlePct / 100);
   const metaBudget = monthlyBudgetInr * ((100 - googlePct) / 100);
-  const searchBudget = googleBudget * (searchPct / subSplitSum);
-  const displayBudget = googleBudget * (displayPct / subSplitSum);
-  const youtubeBudget = googleBudget * (youtubePct / subSplitSum);
+  const searchBudget = usesGoogleUac ? 0 : googleBudget * (searchPct / googleSubSplitSum);
+  const displayBudget = usesGoogleUac ? 0 : googleBudget * (displayPct / googleSubSplitSum);
+  const youtubeBudget = usesGoogleUac ? 0 : googleBudget * (youtubePct / googleSubSplitSum);
+  const uacBudget = usesGoogleUac ? googleBudget : 0;
+  const facebookBudget = metaBudget * (facebookPct / 100);
+  const instagramBudget = metaBudget * ((100 - facebookPct) / 100);
 
   const channelSpend: Record<ChannelId, number> = useMemo(
     () => ({
       "google-search": searchBudget,
       "google-display": displayBudget,
       youtube: youtubeBudget,
-      meta: metaBudget,
+      "google-uac": uacBudget,
+      facebook: facebookBudget,
+      instagram: instagramBudget,
       seo: organic.seo.investmentInr,
       aso: organic.aso.investmentInr,
     }),
-    [searchBudget, displayBudget, youtubeBudget, metaBudget, organic]
+    [searchBudget, displayBudget, youtubeBudget, uacBudget, facebookBudget, instagramBudget, organic]
   );
 
   const allForecasts = useMemo(() => {
     const map: Partial<Record<ChannelId, Record<ScenarioName, ChannelForecast>>> = {};
     for (const channel of visibleChannels) {
       if (channel.isOrganic) {
-        const entryVolume = channel.id === "seo" ? organic.seo.entryVolume : organic.aso.entryVolume;
+        const key = channel.id as "seo" | "aso";
+        const state = organic[key];
         map[channel.id] = runThreeOrganicScenarios({
           channelId: channel.id,
-          entryCount: entryVolume,
+          entryCount: state.entryVolume,
           spendInr: channelSpend[channel.id],
           template,
           stageAssumptions: stageAssumptionsPlain,
           revenuePerCustomerInr: economics.revenuePerCustomerInr,
           variableCostPerCustomerInr: economics.variableCostPerCustomerInr,
           contributionMarginPct: economics.contributionMarginPct,
+          overrideConversionRatePct: state.overrideEnabled ? state.overrideRatePct : undefined,
         });
       } else {
         map[channel.id] = runThreePaidScenarios({
@@ -347,17 +404,85 @@ export default function GrowthSimulator() {
 
       {activeTab === "google" && (
         <div className="flex flex-col gap-6">
+          {usesGoogleUac ? (
+            <>
+              <p className="text-sm text-foreground/70">
+                Google sells app-acquisition and re-engagement campaigns as one blended <strong>App Campaign</strong>{" "}
+                (formerly Universal App Campaigns) — it auto-places across Search, Display, YouTube and Discover
+                rather than being bought separately, so there&apos;s one channel here instead of three.
+              </p>
+              <ChannelPanel
+                channelId="google-uac"
+                label={getChannel("google-uac").label}
+                group={industry.group}
+                spendInr={channelSpend["google-uac"]}
+                cpcValue={channelCpc["google-uac"].value}
+                cpcValueClass={channelCpc["google-uac"].valueClass}
+                onCpcChange={(v) => setCpcValue("google-uac", v)}
+                template={template}
+                stageAssumptions={stageAssumptionsPlain}
+                targetCacInr={targetCacInr}
+                revenuePerCustomerInr={economics.revenuePerCustomerInr}
+                variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
+                contributionMarginPct={economics.contributionMarginPct}
+              />
+            </>
+          ) : (
+            <>
+              <div className="rounded-lg border border-line bg-surface p-4">
+                <span className="text-xs text-foreground/60">
+                  Split of the {formatInrCompact(googleBudget)}/month Google budget
+                </span>
+                <div className="mt-2 grid grid-cols-3 gap-3">
+                  <SubSplitField label="Search" value={searchPct} onChange={setSearchPct} budget={searchBudget} />
+                  <SubSplitField label="Display" value={displayPct} onChange={setDisplayPct} budget={displayBudget} />
+                  <SubSplitField label="YouTube" value={youtubePct} onChange={setYoutubePct} budget={youtubeBudget} />
+                </div>
+              </div>
+              {(["google-search", "google-display", "youtube"] as ChannelId[]).map((channelId) => (
+                <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
+                  <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
+                  <div className="mt-3">
+                    <ChannelPanel
+                      channelId={channelId}
+                      label={getChannel(channelId).label}
+                      group={industry.group}
+                      spendInr={channelSpend[channelId]}
+                      cpcValue={channelCpc[channelId].value}
+                      cpcValueClass={channelCpc[channelId].valueClass}
+                      onCpcChange={(v) => setCpcValue(channelId, v)}
+                      template={template}
+                      stageAssumptions={stageAssumptionsPlain}
+                      targetCacInr={targetCacInr}
+                      revenuePerCustomerInr={economics.revenuePerCustomerInr}
+                      variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
+                      contributionMarginPct={economics.contributionMarginPct}
+                    />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === "meta" && (
+        <div className="flex flex-col gap-6">
           <div className="rounded-lg border border-line bg-surface p-4">
             <span className="text-xs text-foreground/60">
-              Split of the {formatInrCompact(googleBudget)}/month Google budget
+              Split of the {formatInrCompact(metaBudget)}/month Meta budget
             </span>
-            <div className="mt-2 grid grid-cols-3 gap-3">
-              <SubSplitField label="Search" value={searchPct} onChange={setSearchPct} budget={searchBudget} />
-              <SubSplitField label="Display" value={displayPct} onChange={setDisplayPct} budget={displayBudget} />
-              <SubSplitField label="YouTube" value={youtubePct} onChange={setYoutubePct} budget={youtubeBudget} />
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <SubSplitField label="Facebook" value={facebookPct} onChange={setFacebookPct} budget={facebookBudget} />
+              <SubSplitField
+                label="Instagram"
+                value={100 - facebookPct}
+                onChange={(v) => setFacebookPct(100 - v)}
+                budget={instagramBudget}
+              />
             </div>
           </div>
-          {(["google-search", "google-display", "youtube"] as ChannelId[]).map((channelId) => (
+          {(["facebook", "instagram"] as ChannelId[]).map((channelId) => (
             <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
               <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
               <div className="mt-3">
@@ -382,33 +507,19 @@ export default function GrowthSimulator() {
         </div>
       )}
 
-      {activeTab === "meta" && (
-        <ChannelPanel
-          channelId="meta"
-          label="Meta"
-          group={industry.group}
-          spendInr={channelSpend.meta}
-          cpcValue={channelCpc.meta.value}
-          cpcValueClass={channelCpc.meta.valueClass}
-          onCpcChange={(v) => setCpcValue("meta", v)}
-          template={template}
-          stageAssumptions={stageAssumptionsPlain}
-          targetCacInr={targetCacInr}
-          revenuePerCustomerInr={economics.revenuePerCustomerInr}
-          variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
-          contributionMarginPct={economics.contributionMarginPct}
-        />
-      )}
-
       {activeTab === "seo" && (
         <OrganicChannelPanel
           channelId="seo"
           label="SEO"
           entryVolumeLabel="Estimated organic clicks"
           entryVolume={organic.seo.entryVolume}
-          onEntryVolumeChange={(v) => setOrganic((prev) => ({ ...prev, seo: { ...prev.seo, entryVolume: v } }))}
+          onEntryVolumeChange={(v) => setOrganicField("seo", "entryVolume", v)}
           investmentInr={organic.seo.investmentInr}
-          onInvestmentChange={(v) => setOrganic((prev) => ({ ...prev, seo: { ...prev.seo, investmentInr: v } }))}
+          onInvestmentChange={(v) => setOrganicField("seo", "investmentInr", v)}
+          overrideEnabled={organic.seo.overrideEnabled}
+          onOverrideEnabledChange={(v) => setOrganicField("seo", "overrideEnabled", v)}
+          overrideRatePct={organic.seo.overrideRatePct}
+          onOverrideRatePctChange={(v) => setOrganicField("seo", "overrideRatePct", v)}
           template={template}
           stageAssumptions={stageAssumptionsPlain}
           revenuePerCustomerInr={economics.revenuePerCustomerInr}
@@ -423,9 +534,13 @@ export default function GrowthSimulator() {
           label="ASO"
           entryVolumeLabel="Estimated organic store listing visits"
           entryVolume={organic.aso.entryVolume}
-          onEntryVolumeChange={(v) => setOrganic((prev) => ({ ...prev, aso: { ...prev.aso, entryVolume: v } }))}
+          onEntryVolumeChange={(v) => setOrganicField("aso", "entryVolume", v)}
           investmentInr={organic.aso.investmentInr}
-          onInvestmentChange={(v) => setOrganic((prev) => ({ ...prev, aso: { ...prev.aso, investmentInr: v } }))}
+          onInvestmentChange={(v) => setOrganicField("aso", "investmentInr", v)}
+          overrideEnabled={organic.aso.overrideEnabled}
+          onOverrideEnabledChange={(v) => setOrganicField("aso", "overrideEnabled", v)}
+          overrideRatePct={organic.aso.overrideRatePct}
+          onOverrideRatePctChange={(v) => setOrganicField("aso", "overrideRatePct", v)}
           template={template}
           stageAssumptions={stageAssumptionsPlain}
           revenuePerCustomerInr={economics.revenuePerCustomerInr}
