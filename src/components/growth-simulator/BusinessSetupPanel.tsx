@@ -3,6 +3,8 @@
 import type { BudgetCadence, GoalDefinition, IndustryDefinition } from "@/lib/growth-simulator/types";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 
+export type PlanMode = "budget" | "goal";
+
 interface Props {
   industries: IndustryDefinition[];
   industryId: string;
@@ -12,11 +14,19 @@ interface Props {
   goalId: string;
   onGoalChange: (id: string) => void;
 
+  planMode: PlanMode;
+  onPlanModeChange: (m: PlanMode) => void;
+
   cadence: BudgetCadence;
   onCadenceChange: (c: BudgetCadence) => void;
   budgetInputValue: number;
   onBudgetChange: (v: number) => void;
   monthlyBudgetInr: number;
+
+  targetConversionsInput: string;
+  onTargetConversionsChange: (v: string) => void;
+  computedBudgetInr: number;
+  blendedCacInr: number;
 
   targetCacInput: string;
   onTargetCacChange: (v: string) => void;
@@ -36,10 +46,13 @@ interface Props {
 
 /**
  * PRD §42 "Minimum Required Inputs" — the CXO only has to pick an industry,
- * a goal, and a budget. Everything else (funnel shape, benchmarks, channel
- * defaults) follows automatically from that choice; this panel is where
- * they can still see and override the handful of business-level numbers
- * that aren't specific to any one channel tab.
+ * a goal, and either a budget or a target. Everything else (funnel shape,
+ * benchmarks, channel defaults) follows automatically from that choice.
+ *
+ * "Plan by budget" is the usual direction (budget → forecast outcome).
+ * "Plan by target" is the reverse a working marketer actually starts from
+ * half the time — "I need 5,000 leads this month" — and back-solves the
+ * paid budget required to hit it from the current CPC and funnel rates.
  */
 export default function BusinessSetupPanel({
   industries,
@@ -48,11 +61,17 @@ export default function BusinessSetupPanel({
   availableGoals,
   goalId,
   onGoalChange,
+  planMode,
+  onPlanModeChange,
   cadence,
   onCadenceChange,
   budgetInputValue,
   onBudgetChange,
   monthlyBudgetInr,
+  targetConversionsInput,
+  onTargetConversionsChange,
+  computedBudgetInr,
+  blendedCacInr,
   targetCacInput,
   onTargetCacChange,
   googlePct,
@@ -101,27 +120,78 @@ export default function BusinessSetupPanel({
           <span className="text-xs text-foreground/50">{availableGoals.find((g) => g.id === goalId)?.description}</span>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs text-foreground/60">Budget</span>
-          <div className="flex gap-1.5">
-            <input
-              type="number"
-              value={budgetInputValue}
-              onChange={(e) => onBudgetChange(Number(e.target.value))}
-              className="w-full rounded border border-line bg-background px-2 py-1.5 tabular-nums"
-              step="any"
-            />
-            <select
-              value={cadence}
-              onChange={(e) => onCadenceChange(e.target.value as BudgetCadence)}
-              className="rounded border border-line bg-background px-1.5 py-1.5 text-xs"
-            >
-              <option value="monthly">₹/month</option>
-              <option value="daily">₹/day</option>
-            </select>
+        <div className="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-foreground/60">
+              {planMode === "budget" ? "Budget" : `Target ${valueLabel.toLowerCase()} / month`}
+            </span>
+            <div className="flex rounded-full border border-line p-0.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => onPlanModeChange("budget")}
+                className={`rounded-full px-2 py-0.5 ${
+                  planMode === "budget" ? "bg-brand text-white" : "text-foreground/60"
+                }`}
+              >
+                I know my budget
+              </button>
+              <button
+                type="button"
+                onClick={() => onPlanModeChange("goal")}
+                className={`rounded-full px-2 py-0.5 ${
+                  planMode === "goal" ? "bg-brand text-white" : "text-foreground/60"
+                }`}
+              >
+                I have a target
+              </button>
+            </div>
           </div>
-          <span className="text-xs text-foreground/50">= {formatInrCompact(monthlyBudgetInr)}/month</span>
-        </label>
+
+          {planMode === "budget" ? (
+            <>
+              <div className="flex gap-1.5">
+                <input
+                  type="number"
+                  value={budgetInputValue}
+                  onChange={(e) => onBudgetChange(Number(e.target.value))}
+                  className="w-full rounded border border-line bg-background px-2 py-1.5 tabular-nums"
+                  step="any"
+                />
+                <select
+                  value={cadence}
+                  onChange={(e) => onCadenceChange(e.target.value as BudgetCadence)}
+                  className="rounded border border-line bg-background px-1.5 py-1.5 text-xs"
+                >
+                  <option value="monthly">₹/month</option>
+                  <option value="daily">₹/day</option>
+                </select>
+              </div>
+              <span className="text-xs text-foreground/50">= {formatInrCompact(monthlyBudgetInr)}/month</span>
+            </>
+          ) : (
+            <>
+              <input
+                type="number"
+                value={targetConversionsInput}
+                onChange={(e) => onTargetConversionsChange(e.target.value)}
+                placeholder="e.g. 5000"
+                className="w-full rounded border border-line bg-background px-2 py-1.5 tabular-nums"
+                step="any"
+              />
+              <span className="text-xs text-foreground/50">
+                {blendedCacInr > 0 ? (
+                  <>
+                    ≈ {formatInrCompact(blendedCacInr)} per {valueLabel.toLowerCase().replace(/s$/, "")} at your
+                    current channel mix → <strong className="text-foreground">{formatInrCompact(computedBudgetInr)}/month</strong> paid
+                    budget needed
+                  </>
+                ) : (
+                  "Set your channel CPCs first so a budget can be back-solved."
+                )}
+              </span>
+            </>
+          )}
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs text-foreground/60">Target CAC (optional)</span>

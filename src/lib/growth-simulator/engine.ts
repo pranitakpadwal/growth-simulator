@@ -150,6 +150,83 @@ export function maxSustainableCpc(
   return targetCacInr * cumulativeRate;
 }
 
+export interface CostLadderRung {
+  stageId: string;
+  label: string;
+  rate: number; // % conversion INTO this stage from the previous one
+  cumulativeCostInr: number; // cost to acquire one unit of this stage, all upstream drop-off included
+  isValueStage: boolean;
+}
+
+/**
+ * The "CPC is not CPI" cascade — cost compounds at every drop-off, so the
+ * number you're bidding (CPC) and the number that actually matters (cost
+ * per funded customer / registered user / whatever the value stage is)
+ * can be many multiples apart. Walks the full template, not just up to the
+ * value stage, so downstream activation cost is visible too.
+ */
+export function costLadder(
+  baseCpc: number,
+  template: FunnelTemplate,
+  stageAssumptions: Record<string, number>
+): CostLadderRung[] {
+  let cumulativeRate = 1;
+  return template.stages.map((stage) => {
+    const rate = (stageAssumptions[stage.metricId] ?? 0) / 100;
+    cumulativeRate *= rate;
+    return {
+      stageId: stage.id,
+      label: stage.label,
+      rate: rate * 100,
+      cumulativeCostInr: cumulativeRate > 0 ? baseCpc / cumulativeRate : 0,
+      isValueStage: stage.id === template.valueStageId,
+    };
+  });
+}
+
+export interface PaidChannelWeight {
+  channelId: ChannelId;
+  cpc: number;
+  /** Share of the paid budget this channel gets — shares are normalized, needn't sum to exactly 100. */
+  sharePct: number;
+}
+
+/**
+ * Goal-first planning ("I need 5,000 leads — what should I spend?"), the
+ * mirror image of the usual budget → outcome direction. Because the funnel
+ * model is linear (no diminishing-returns curve on paid channels — see
+ * README), blended CAC is invariant to the budget's absolute size: probing
+ * at one nominal budget and reading off spend/conversions gives the same
+ * ratio a real budget of any size would. `blendedCacInr` is exposed
+ * alongside the answer so the UI can show its work.
+ */
+export function computeRequiredPaidBudget(params: {
+  targetConversions: number;
+  template: FunnelTemplate;
+  stageAssumptions: Record<string, number>;
+  channelWeights: PaidChannelWeight[];
+}): { requiredBudgetInr: number; blendedCacInr: number } {
+  const NOMINAL_PROBE_BUDGET_INR = 1_00_00_000; // ₹1 Cr — arbitrary; see doc comment above
+  const shareSum = params.channelWeights.reduce((sum, w) => sum + w.sharePct, 0) || 1;
+
+  let spend = 0;
+  let conversions = 0;
+  for (const weight of params.channelWeights) {
+    const channelSpend = NOMINAL_PROBE_BUDGET_INR * (weight.sharePct / shareSum);
+    let count = weight.cpc > 0 ? channelSpend / weight.cpc : 0;
+    for (const stage of params.template.stages) {
+      count *= (params.stageAssumptions[stage.metricId] ?? 0) / 100;
+      if (stage.id === params.template.valueStageId) break;
+    }
+    spend += channelSpend;
+    conversions += count;
+  }
+
+  const blendedCacInr = conversions > 0 ? spend / conversions : 0;
+  const requiredBudgetInr = blendedCacInr > 0 ? params.targetConversions * blendedCacInr : 0;
+  return { requiredBudgetInr, blendedCacInr };
+}
+
 /**
  * PRD §20 Constraint Engine — walk each benchmarked funnel stage and flag
  * whichever one sits furthest below its benchmark median. That stage is
