@@ -20,7 +20,7 @@ const fraunces = Fraunces({
 
 const title = "Growth Strategy Simulator";
 const description =
-  "Plan growth before you spend the money: benchmark your funnel, model conservative/base/upside forecasts, find your biggest constraint, and see where the next rupee should go.";
+  "Plan a Google & Meta performance marketing budget for the India market, industry by industry: audience, cost ladder, conservative/base/upside forecasts, and where the next rupee should go.";
 
 export const metadata: Metadata = {
   title: {

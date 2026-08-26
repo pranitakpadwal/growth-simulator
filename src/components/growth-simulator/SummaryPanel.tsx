@@ -4,6 +4,7 @@ import { formatInrCompact, formatNumber } from "@/lib/growth-simulator/format";
 import BenchmarkTable, { type BenchmarkRow } from "./BenchmarkTable";
 import ConstraintCard from "./ConstraintCard";
 import ChannelEfficiencyTable from "./ChannelEfficiencyTable";
+import SourceList, { type SourceEntry } from "./SourceList";
 
 interface Props {
   totalSpendInr: number;
@@ -19,6 +20,7 @@ interface Props {
   bottleneck: ConstraintAssessment;
   efficiencyRows: ChannelEfficiency[];
   benchmarkRows: BenchmarkRow[];
+  sources: SourceEntry[];
 }
 
 /** PRD §24 CXO dashboard — the roll-up across every channel tab. */
@@ -36,6 +38,7 @@ export default function SummaryPanel({
   bottleneck,
   efficiencyRows,
   benchmarkRows,
+  sources,
 }: Props) {
   const cacOverTarget = targetCacInr != null && blendedCacInr > targetCacInr;
 
@@ -83,6 +86,8 @@ export default function SummaryPanel({
           </div>
         </div>
       </section>
+
+      <SourceList entries={sources} />
     </div>
   );
 }

@@ -1,13 +1,18 @@
 # Growth Strategy Simulator
 
-A CXO-grade growth planning tool: benchmark your funnel against sourced market
-data, model conservative/base/upside forecasts, find your biggest constraint,
-and see where the next rupee should go — before you spend the money.
+A CXO-grade Google & Meta performance marketing planning tool for the
+**India market**: pick an industry and a goal, and it benchmarks your funnel
+against sourced India market data, shows the real cost ladder from a click to
+a paying customer, back-solves budget from a target (or forecasts outcome
+from a budget), models conservative/base/upside scenarios, and shows where
+the next rupee should go across Google Search, Display, YouTube, Meta, SEO
+and ASO.
 
-This build covers **Personal Loans, India** end to end (search → clicks →
-leads → approvals → funded customers → contribution), as the first real
-vertical. More industry packs (Ecommerce, Apps, Investments...) follow the
-same benchmark + forecast + scenario architecture.
+Ships with four industries today — Personal Loans, EMI Calculator,
+Investments, and News/Content App (installs) — each with its own funnel
+shape (lending lead-gen, investment lead-gen, app install, or website
+registration/click) and India-specific benchmarks. More industry packs
+follow the same benchmark + forecast + scenario architecture.
 
 ## What's in here
 

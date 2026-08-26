@@ -6,16 +6,18 @@ export default function HomePage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 sm:px-8">
           <span className="text-xs font-medium uppercase tracking-wide text-brand">
-            Growth Strategy Simulator
+            Growth Strategy Simulator · India
           </span>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Plan your growth before you spend the money
+            Plan your Google &amp; Meta performance marketing before you spend the money
           </h1>
           <p className="max-w-2xl text-sm text-foreground/70 sm:text-base">
-            If we invest this much money, in this market, through these channels, with our current
-            business economics — what is realistically achievable, and where should the next rupee go?
-            This build covers <strong className="text-foreground">Personal Loans, India</strong> end to
-            end; more industry packs follow the same benchmark + forecast + scenario architecture.
+            Pick an industry and a goal — lead generation, app installs, website registrations — and get
+            a full India performance marketing plan: who you&apos;re reaching, what it costs at every
+            stage from a click to a paying customer, what budget a target number of leads or installs
+            actually needs, and where across Google Search, Display, YouTube, Meta, SEO and ASO the next
+            rupee should go. Built for India benchmarks and an India audience throughout — not a global
+            average with an India label on it.
           </p>
         </div>
       </header>

@@ -7,15 +7,19 @@ import { getChannelBenchmark, getFunnelBenchmark } from "@/lib/growth-simulator/
 import { defaultEconomics, type EconomicsDefaults } from "@/lib/growth-simulator/defaults";
 import {
   assessConstraints,
+  computeRequiredPaidBudget,
   rankChannelEfficiency,
   runThreeOrganicScenarios,
   runThreePaidScenarios,
   type ChannelEfficiency,
+  type PaidChannelWeight,
 } from "@/lib/growth-simulator/engine";
 import type { ChannelForecast, BudgetCadence } from "@/lib/growth-simulator/types";
+import { getAudiencePersona } from "@/lib/growth-simulator/audience";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 import type { BenchmarkRow } from "./BenchmarkTable";
-import BusinessSetupPanel from "./BusinessSetupPanel";
+import BusinessSetupPanel, { type PlanMode } from "./BusinessSetupPanel";
+import AudienceCard from "./AudienceCard";
 import ChannelPanel from "./ChannelPanel";
 import OrganicChannelPanel from "./OrganicChannelPanel";
 import SummaryPanel from "./SummaryPanel";
@@ -49,8 +53,10 @@ const TAB_LABEL: Record<ChannelTabId | "summary", string> = {
 export default function GrowthSimulator() {
   const [industryId, setIndustryId] = useState<IndustryId>("personal-loans");
   const [goalId, setGoalId] = useState<GoalId>(getIndustry("personal-loans").defaultGoalId);
+  const [planMode, setPlanMode] = useState<PlanMode>("budget");
   const [cadence, setCadence] = useState<BudgetCadence>("monthly");
   const [budgetInputValue, setBudgetInputValue] = useState(500000); // ₹5L
+  const [targetConversionsInput, setTargetConversionsInput] = useState("5000");
   const [targetCacInput, setTargetCacInput] = useState("");
   const [googlePct, setGooglePct] = useState(70);
   const [searchPct, setSearchPct] = useState(55);
@@ -105,12 +111,39 @@ export default function GrowthSimulator() {
     setChannelCpc((prev) => ({ ...prev, [channelId]: { value, valueClass: "actual" } }));
   }
 
-  const monthlyBudgetInr = cadence === "daily" ? budgetInputValue * 30 : budgetInputValue;
   const targetCacInr = targetCacInput.trim() === "" ? null : Number(targetCacInput);
+
+  const stageAssumptionsPlain = useMemo(() => {
+    const plain: Record<string, number> = {};
+    for (const [metricId, a] of Object.entries(stageAssumptions)) plain[metricId] = a.value;
+    return plain;
+  }, [stageAssumptions]);
+
+  const subSplitSum = searchPct + displayPct + youtubePct || 1;
+  const channelWeights: PaidChannelWeight[] = [
+    { channelId: "google-search", cpc: channelCpc["google-search"].value, sharePct: googlePct * (searchPct / subSplitSum) },
+    { channelId: "google-display", cpc: channelCpc["google-display"].value, sharePct: googlePct * (displayPct / subSplitSum) },
+    { channelId: "youtube", cpc: channelCpc.youtube.value, sharePct: googlePct * (youtubePct / subSplitSum) },
+    { channelId: "meta", cpc: channelCpc.meta.value, sharePct: 100 - googlePct },
+  ];
+
+  const { requiredBudgetInr, blendedCacInr } = useMemo(
+    () =>
+      computeRequiredPaidBudget({
+        targetConversions: Number(targetConversionsInput) || 0,
+        template,
+        stageAssumptions: stageAssumptionsPlain,
+        channelWeights,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targetConversionsInput, template, stageAssumptionsPlain, channelCpc, googlePct, searchPct, displayPct, youtubePct]
+  );
+
+  const monthlyBudgetInr =
+    planMode === "goal" ? requiredBudgetInr : cadence === "daily" ? budgetInputValue * 30 : budgetInputValue;
 
   const googleBudget = monthlyBudgetInr * (googlePct / 100);
   const metaBudget = monthlyBudgetInr * ((100 - googlePct) / 100);
-  const subSplitSum = searchPct + displayPct + youtubePct || 1;
   const searchBudget = googleBudget * (searchPct / subSplitSum);
   const displayBudget = googleBudget * (displayPct / subSplitSum);
   const youtubeBudget = googleBudget * (youtubePct / subSplitSum);
@@ -126,12 +159,6 @@ export default function GrowthSimulator() {
     }),
     [searchBudget, displayBudget, youtubeBudget, metaBudget, organic]
   );
-
-  const stageAssumptionsPlain = useMemo(() => {
-    const plain: Record<string, number> = {};
-    for (const [metricId, a] of Object.entries(stageAssumptions)) plain[metricId] = a.value;
-    return plain;
-  }, [stageAssumptions]);
 
   const baseForecasts = useMemo(() => {
     const map: Partial<Record<ChannelId, ChannelForecast>> = {};
@@ -209,6 +236,19 @@ export default function GrowthSimulator() {
     onChange: (v: number) => setStageValue(stage.metricId, v),
   }));
 
+  const sources = [
+    ...template.stages.map((stage) => {
+      const b = getFunnelBenchmark(stage.metricId);
+      return { label: b.label, source: b.source, tier: b.tier, sourceUrl: b.sourceUrl };
+    }),
+    ...visibleChannels
+      .filter((c) => !c.isOrganic)
+      .map((c) => {
+        const b = getChannelBenchmark(industry.group, c.id);
+        return { label: `${c.label} CPC/CTR`, source: b.source, tier: b.tier };
+      }),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <BusinessSetupPanel
@@ -218,11 +258,17 @@ export default function GrowthSimulator() {
         availableGoals={availableGoals}
         goalId={goalId}
         onGoalChange={handleGoalChange}
+        planMode={planMode}
+        onPlanModeChange={setPlanMode}
         cadence={cadence}
         onCadenceChange={setCadence}
         budgetInputValue={budgetInputValue}
         onBudgetChange={setBudgetInputValue}
         monthlyBudgetInr={monthlyBudgetInr}
+        targetConversionsInput={targetConversionsInput}
+        onTargetConversionsChange={setTargetConversionsInput}
+        computedBudgetInr={requiredBudgetInr}
+        blendedCacInr={blendedCacInr}
         targetCacInput={targetCacInput}
         onTargetCacChange={setTargetCacInput}
         googlePct={googlePct}
@@ -236,6 +282,8 @@ export default function GrowthSimulator() {
         onContributionMarginChange={(v) => setEconomics((prev) => ({ ...prev, contributionMarginPct: v }))}
         valueLabel={template.valueLabel}
       />
+
+      <AudienceCard persona={getAudiencePersona(industryId)} />
 
       <div className="flex gap-1 border-b border-line">
         {visibleTabs.map((tab) => (
@@ -358,6 +406,7 @@ export default function GrowthSimulator() {
           bottleneck={bottleneck}
           efficiencyRows={efficiencyRows}
           benchmarkRows={benchmarkRows}
+          sources={sources}
         />
       )}
 

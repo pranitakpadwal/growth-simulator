@@ -2,9 +2,10 @@
 
 import type { ChannelId, FunnelTemplate, IndustryGroup, ValueClass } from "@/lib/growth-simulator/types";
 import { getChannelBenchmark } from "@/lib/growth-simulator/benchmarks";
-import { runThreePaidScenarios, maxSustainableCpc } from "@/lib/growth-simulator/engine";
+import { runThreePaidScenarios, maxSustainableCpc, costLadder } from "@/lib/growth-simulator/engine";
 import { formatInrCompact, formatNumber, formatPct } from "@/lib/growth-simulator/format";
 import ScenarioTable from "./ScenarioTable";
+import CostLadder from "./CostLadder";
 
 interface Props {
   channelId: ChannelId;
@@ -55,6 +56,7 @@ export default function ChannelPanel({
 
   const maxCpc = targetCacInr != null ? maxSustainableCpc(template, stageAssumptions, targetCacInr) : null;
   const overTarget = maxCpc != null && cpcValue > maxCpc;
+  const rungs = costLadder(cpcValue, template, stageAssumptions);
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,6 +113,8 @@ export default function ChannelPanel({
           {overTarget ? " — over target." : " — within target."}
         </div>
       )}
+
+      <CostLadder rungs={rungs} cpc={cpcValue} />
 
       <ScenarioTable forecasts={forecasts} valueLabel={template.valueLabel} hasRevenue={template.hasRevenue} />
     </div>
