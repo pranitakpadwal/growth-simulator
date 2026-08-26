@@ -1,4 +1,4 @@
-import type { FunnelForecast, ScenarioName } from "@/lib/growth-simulator/types";
+import type { ScenarioName } from "@/lib/growth-simulator/types";
 import { formatInrCompact, formatNumber } from "@/lib/growth-simulator/format";
 
 const SCENARIO_LABEL: Record<ScenarioName, string> = {
@@ -7,18 +7,36 @@ const SCENARIO_LABEL: Record<ScenarioName, string> = {
   upside: "Upside",
 };
 
+const SCENARIOS: ScenarioName[] = ["conservative", "base", "upside"];
+
+export interface ScenarioFigures {
+  spendInr: number;
+  valueCount: number;
+  cacInr: number;
+  revenueInr: number;
+  contributionInr: number;
+}
+
 /** PRD §27 "Three Forecast Cases" — never show a single-point forecast. */
 export default function ScenarioTable({
   forecasts,
+  valueLabel,
+  hasRevenue,
 }: {
-  forecasts: Record<ScenarioName, FunnelForecast>;
+  forecasts: Record<ScenarioName, ScenarioFigures>;
+  valueLabel: string;
+  hasRevenue: boolean;
 }) {
-  const rows: Array<{ label: string; get: (f: FunnelForecast) => string }> = [
-    { label: "Funded customers", get: (f) => formatNumber(f.fundedCustomers) },
-    { label: "Media spend", get: (f) => formatInrCompact(f.spendInr) },
-    { label: "CAC", get: (f) => formatInrCompact(f.cacInr) },
-    { label: "Revenue", get: (f) => formatInrCompact(f.revenueInr) },
-    { label: "Contribution", get: (f) => formatInrCompact(f.contributionInr) },
+  const rows: Array<{ label: string; get: (f: ScenarioFigures) => string }> = [
+    { label: valueLabel, get: (f) => formatNumber(f.valueCount) },
+    { label: "Spend", get: (f) => formatInrCompact(f.spendInr) },
+    { label: "CAC", get: (f) => (f.cacInr > 0 ? formatInrCompact(f.cacInr) : "—") },
+    ...(hasRevenue
+      ? [
+          { label: "Revenue", get: (f: ScenarioFigures) => formatInrCompact(f.revenueInr) },
+          { label: "Contribution", get: (f: ScenarioFigures) => formatInrCompact(f.contributionInr) },
+        ]
+      : []),
   ];
 
   return (
@@ -27,7 +45,7 @@ export default function ScenarioTable({
         <thead>
           <tr className="border-b border-line bg-brand-soft/40 text-left text-xs uppercase tracking-wide text-foreground/60">
             <th className="px-3 py-2 font-medium">Metric</th>
-            {(["conservative", "base", "upside"] as ScenarioName[]).map((s) => (
+            {SCENARIOS.map((s) => (
               <th key={s} className="px-3 py-2 text-right font-medium">
                 {SCENARIO_LABEL[s]}
               </th>
@@ -38,7 +56,7 @@ export default function ScenarioTable({
           {rows.map((row) => (
             <tr key={row.label} className="border-b border-line last:border-0">
               <td className="px-3 py-2 font-medium text-foreground">{row.label}</td>
-              {(["conservative", "base", "upside"] as ScenarioName[]).map((s) => (
+              {SCENARIOS.map((s) => (
                 <td
                   key={s}
                   className={`px-3 py-2 text-right tabular-nums ${
