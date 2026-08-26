@@ -21,6 +21,7 @@ interface Props {
   onOverrideRatePctChange: (v: number) => void;
   template: FunnelTemplate;
   stageAssumptions: Record<string, number>;
+  onStageRateChange: (metricId: string, value: number) => void;
   revenuePerCustomerInr: number;
   variableCostPerCustomerInr: number;
   contributionMarginPct: number;
@@ -54,6 +55,7 @@ export default function OrganicChannelPanel({
   onOverrideRatePctChange,
   template,
   stageAssumptions,
+  onStageRateChange,
   revenuePerCustomerInr,
   variableCostPerCustomerInr,
   contributionMarginPct,
@@ -70,14 +72,22 @@ export default function OrganicChannelPanel({
     overrideConversionRatePct: overrideEnabled ? overrideRatePct : undefined,
   });
 
+  const OVERRIDE_METRIC_ID = "__override__";
   const funnelStages = [
     { label: entryVolumeLabel, count: entryVolume },
     ...forecasts.base.stages.map((s) => ({
       label: s.label,
       count: s.count,
-      isValueStage: s.stageId === template.valueStageId,
+      rate: s.rate,
+      metricId: overrideEnabled ? OVERRIDE_METRIC_ID : template.stages.find((st) => st.id === s.stageId)?.metricId,
+      isValueStage: overrideEnabled || s.stageId === template.valueStageId,
     })),
   ];
+
+  function handleFunnelRateChange(metricId: string, value: number) {
+    if (metricId === OVERRIDE_METRIC_ID) onOverrideRatePctChange(value);
+    else onStageRateChange(metricId, value);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -152,7 +162,7 @@ export default function OrganicChannelPanel({
         </p>
       </div>
 
-      <FunnelChart stages={funnelStages} />
+      <FunnelChart stages={funnelStages} onRateChange={handleFunnelRateChange} />
 
       <ScenarioTable forecasts={forecasts} valueLabel={template.valueLabel} hasRevenue={template.hasRevenue} />
     </div>

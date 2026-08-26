@@ -1,5 +1,6 @@
 import type { ScenarioName } from "@/lib/growth-simulator/types";
 import { formatInrCompact, formatNumber } from "@/lib/growth-simulator/format";
+import InfoTooltip from "./InfoTooltip";
 
 const SCENARIO_LABEL: Record<ScenarioName, string> = {
   conservative: "Conservative",
@@ -27,9 +28,14 @@ export default function ScenarioTable({
   valueLabel: string;
   hasRevenue: boolean;
 }) {
-  const rows: Array<{ label: string; get: (f: ScenarioFigures) => string }> = [
+  const rows: Array<{ label: string; tooltip?: string; get: (f: ScenarioFigures) => string }> = [
     { label: valueLabel, get: (f) => formatNumber(f.valueCount) },
-    { label: "Spend", get: (f) => formatInrCompact(f.spendInr) },
+    {
+      label: "Spend",
+      tooltip:
+        "Fixed at your budget input across all three scenarios by design — this is a budget-held-constant stress test. Conservative/Upside flex CPC and conversion rates instead, which is why CAC and the outcome count move but spend doesn't. Switch to \"I have a target\" mode to see budget flex instead.",
+      get: (f) => formatInrCompact(f.spendInr),
+    },
     { label: "CAC", get: (f) => (f.cacInr > 0 ? formatInrCompact(f.cacInr) : "—") },
     ...(hasRevenue
       ? [
@@ -55,7 +61,10 @@ export default function ScenarioTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.label} className="border-b border-line last:border-0">
-              <td className="px-3 py-2 font-medium text-foreground">{row.label}</td>
+              <td className="flex items-center px-3 py-2 font-medium text-foreground">
+                {row.label}
+                {row.tooltip && <InfoTooltip definition={row.tooltip} />}
+              </td>
               {SCENARIOS.map((s) => (
                 <td
                   key={s}
