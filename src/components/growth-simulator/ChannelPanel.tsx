@@ -8,6 +8,7 @@ import ScenarioTable from "./ScenarioTable";
 import CostLadder from "./CostLadder";
 import FunnelChart from "./FunnelChart";
 import ScenarioBarChart from "./ScenarioBarChart";
+import InfoTooltip from "./InfoTooltip";
 
 interface Props {
   channelId: ChannelId;
@@ -81,7 +82,10 @@ export default function ChannelPanel({
         </div>
         <label className="rounded-lg border border-line bg-surface p-3">
           <div className="flex items-center justify-between text-xs uppercase tracking-wide text-foreground/50">
-            <span>CPC</span>
+            <span className="flex items-center">
+              CPC
+              <InfoTooltip term="cpc" />
+            </span>
             <span className={cpcValueClass === "actual" ? "text-brand-dark" : "text-amber-700"}>
               {cpcValueClass === "actual" ? "Actual" : "Benchmark"}
             </span>

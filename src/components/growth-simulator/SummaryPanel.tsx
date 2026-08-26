@@ -7,6 +7,7 @@ import ChannelEfficiencyTable from "./ChannelEfficiencyTable";
 import SourceList, { type SourceEntry } from "./SourceList";
 import MediaSplitBar, { type MediaSplitSlice } from "./MediaSplitBar";
 import ScenarioBarChart from "./ScenarioBarChart";
+import InfoTooltip from "./InfoTooltip";
 
 interface Props {
   totalSpendInr: number;
@@ -55,6 +56,7 @@ export default function SummaryPanel({
         <SummaryStat label={valueLabel} value={formatNumber(totalConversions)} />
         <SummaryStat
           label="Blended CAC"
+          term="blendedCac"
           value={blendedCacInr > 0 ? formatInrCompact(blendedCacInr) : "—"}
           sub={
             targetCacInr != null
@@ -66,8 +68,12 @@ export default function SummaryPanel({
           tone={targetCacInr != null ? (cacOverTarget ? "bad" : "good") : "neutral"}
         />
         {hasRevenue && <SummaryStat label="Revenue" value={formatInrCompact(totalRevenueInr)} />}
-        {hasRevenue && <SummaryStat label="Contribution" value={formatInrCompact(totalContributionInr)} />}
-        {hasRevenue && <SummaryStat label="GEI" value={gei.toFixed(2)} sub="Contribution ₹ per ₹ spent" />}
+        {hasRevenue && (
+          <SummaryStat label="Contribution" term="contribution" value={formatInrCompact(totalContributionInr)} />
+        )}
+        {hasRevenue && (
+          <SummaryStat label="GEI" term="gei" value={gei.toFixed(2)} sub="Contribution ₹ per ₹ spent" />
+        )}
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -109,16 +115,21 @@ function SummaryStat({
   value,
   sub,
   tone = "neutral",
+  term,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: "good" | "bad" | "neutral";
+  term?: string;
 }) {
   const toneClass = tone === "good" ? "text-brand-dark" : tone === "bad" ? "text-red-700" : "text-foreground/50";
   return (
     <div className="rounded-lg border border-line bg-surface p-3">
-      <div className="text-xs uppercase tracking-wide text-foreground/50">{label}</div>
+      <div className="flex items-center text-xs uppercase tracking-wide text-foreground/50">
+        {label}
+        {term && <InfoTooltip term={term} />}
+      </div>
       <div className="mt-1 font-display text-xl font-semibold text-foreground">{value}</div>
       {sub && <div className={`mt-0.5 text-xs ${toneClass}`}>{sub}</div>}
     </div>

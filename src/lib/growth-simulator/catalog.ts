@@ -98,6 +98,42 @@ export const FUNNEL_TEMPLATES: Record<string, FunnelTemplate> = {
     hasRevenue: false,
     valueLabel: "Engaged visits",
   },
+  "app-install-open": {
+    id: "app-install-open",
+    label: "Store Visit → Install → First Open",
+    stages: [
+      { id: "store-visit", label: "Store listing visits", metricId: "storeListingVisitRate" },
+      { id: "install", label: "Installs", metricId: "installRate" },
+      { id: "first-open", label: "App opens (first launch)", metricId: "firstOpenRate" },
+    ],
+    valueStageId: "first-open",
+    hasRevenue: true,
+    valueLabel: "App opens",
+  },
+  "in-app-purchase": {
+    id: "in-app-purchase",
+    label: "Store Visit → Install → First Open → Purchase",
+    stages: [
+      { id: "store-visit", label: "Store listing visits", metricId: "storeListingVisitRate" },
+      { id: "install", label: "Installs", metricId: "installRate" },
+      { id: "first-open", label: "App opens (first launch)", metricId: "firstOpenRate" },
+      { id: "purchase", label: "Purchases", metricId: "purchaseRate" },
+    ],
+    valueStageId: "purchase",
+    hasRevenue: true,
+    valueLabel: "Purchases",
+  },
+  "use-calculator": {
+    id: "use-calculator",
+    label: "Engaged Visit → Calculator Used",
+    stages: [
+      { id: "engaged-visit", label: "Engaged visits", metricId: "engagedVisitRate" },
+      { id: "calculator-used", label: "Calculator uses", metricId: "calculatorUsageRate" },
+    ],
+    valueStageId: "calculator-used",
+    hasRevenue: true,
+    valueLabel: "Calculator uses",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -135,10 +171,28 @@ export const GOALS: Record<string, GoalDefinition> = {
     description: "Top-of-funnel awareness — engaged site visits, no conversion event yet.",
     funnelTemplateId: "website-click",
   },
+  "app-install-open": {
+    id: "app-install-open",
+    label: "Install App + Launch Home Page",
+    description: "Install isn't enough on its own — the campaign KPI is the app actually being opened once.",
+    funnelTemplateId: "app-install-open",
+  },
+  "in-app-purchase": {
+    id: "in-app-purchase",
+    label: "In-App Purchase",
+    description: "Drive installs all the way through to a completed in-app purchase or transaction.",
+    funnelTemplateId: "in-app-purchase",
+  },
+  "use-calculator": {
+    id: "use-calculator",
+    label: "Use Calculator",
+    description: "Get visitors to actually run a calculation — a mid-funnel engagement goal, not a lead yet.",
+    funnelTemplateId: "use-calculator",
+  },
 };
 
-/** The two goals that put an app in the customer's hands — used to gate ASO's visibility. */
-const APP_GOAL_IDS = new Set(["app-install", "app-lead-form"]);
+/** The goals that put an app in the customer's hands — used to gate ASO's visibility. */
+const APP_GOAL_IDS = new Set(["app-install", "app-install-open", "app-lead-form", "in-app-purchase"]);
 
 /** Per-industry override: "Website Lead Form" resolves to a different template for lending vs. investment products. */
 export function resolveFunnelTemplate(industryId: string, goalId: string): FunnelTemplate {
@@ -155,7 +209,7 @@ export function resolveFunnelTemplate(industryId: string, goalId: string): Funne
 // ---------------------------------------------------------------------------
 
 const LEAD_FORM_GOALS = ["website-lead-form", "website-click"] as const;
-const APP_GOALS = ["app-install", "app-lead-form", "website-click"] as const;
+const APP_GOALS = ["app-install", "app-install-open", "app-lead-form", "in-app-purchase", "website-click"] as const;
 
 export const INDUSTRIES: IndustryDefinition[] = [
   {
@@ -170,7 +224,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "EMI Calculator",
     group: "finance",
     defaultGoalId: "website-lead-form",
-    goalIds: [...LEAD_FORM_GOALS],
+    goalIds: ["website-lead-form", "use-calculator", "website-click"],
   },
   {
     id: "epf",

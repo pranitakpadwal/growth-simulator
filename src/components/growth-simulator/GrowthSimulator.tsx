@@ -15,7 +15,7 @@ import {
   type PaidChannelWeight,
 } from "@/lib/growth-simulator/engine";
 import type { ChannelForecast, BudgetCadence, ScenarioName } from "@/lib/growth-simulator/types";
-import { getAudiencePersona } from "@/lib/growth-simulator/audience";
+import { getAudiencePersona, type AudiencePersona } from "@/lib/growth-simulator/audience";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 import type { BenchmarkRow } from "./BenchmarkTable";
 import BusinessSetupPanel, { type PlanMode } from "./BusinessSetupPanel";
@@ -74,6 +74,7 @@ export default function GrowthSimulator() {
     seo: { entryVolume: 20000, investmentInr: 0 },
     aso: { entryVolume: 5000, investmentInr: 0 },
   });
+  const [audience, setAudience] = useState<AudiencePersona>(() => getAudiencePersona(industryId));
 
   const industry = useMemo(() => getIndustry(industryId), [industryId]);
   const availableGoals = useMemo(() => industry.goalIds.map((id) => GOALS[id]), [industry]);
@@ -91,6 +92,7 @@ export default function GrowthSimulator() {
     setIndustryId(nextIndustry.id);
     setGoalId(nextGoalId);
     setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
+    setAudience(getAudiencePersona(nextIndustry.id));
     setChannelCpc(initialCpcMap(nextIndustry.group));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
@@ -307,7 +309,7 @@ export default function GrowthSimulator() {
         valueLabel={template.valueLabel}
       />
 
-      <AudienceCard persona={getAudiencePersona(industryId)} />
+      <AudienceCard persona={audience} onChange={setAudience} />
 
       <div className="flex gap-1 border-b border-line">
         {visibleTabs.map((tab) => (

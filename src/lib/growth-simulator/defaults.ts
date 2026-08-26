@@ -33,15 +33,27 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "credit-cards:website-lead-form": { revenuePerCustomerInr: 4500, variableCostPerCustomerInr: 350, contributionMarginPct: 72 },
   "investments:website-lead-form": { revenuePerCustomerInr: 3200, variableCostPerCustomerInr: 250, contributionMarginPct: 60 },
   "investments:website-registration": { revenuePerCustomerInr: 2000, variableCostPerCustomerInr: 150, contributionMarginPct: 55 },
+  "emi-calculator:use-calculator": { revenuePerCustomerInr: 80, variableCostPerCustomerInr: 10, contributionMarginPct: 55 },
 
   "news-app:app-install": { revenuePerCustomerInr: 40, variableCostPerCustomerInr: 5, contributionMarginPct: 50 },
+  "news-app:app-install-open": { revenuePerCustomerInr: 55, variableCostPerCustomerInr: 6, contributionMarginPct: 50 },
   "news-app:app-lead-form": { revenuePerCustomerInr: 220, variableCostPerCustomerInr: 15, contributionMarginPct: 55 },
+  "news-app:in-app-purchase": { revenuePerCustomerInr: 500, variableCostPerCustomerInr: 30, contributionMarginPct: 60 },
+
   "social-app:app-install": { revenuePerCustomerInr: 25, variableCostPerCustomerInr: 3, contributionMarginPct: 45 },
+  "social-app:app-install-open": { revenuePerCustomerInr: 35, variableCostPerCustomerInr: 4, contributionMarginPct: 45 },
   "social-app:app-lead-form": { revenuePerCustomerInr: 150, variableCostPerCustomerInr: 10, contributionMarginPct: 50 },
+  "social-app:in-app-purchase": { revenuePerCustomerInr: 250, variableCostPerCustomerInr: 15, contributionMarginPct: 55 },
+
   "business-app:app-install": { revenuePerCustomerInr: 60, variableCostPerCustomerInr: 5, contributionMarginPct: 55 },
+  "business-app:app-install-open": { revenuePerCustomerInr: 80, variableCostPerCustomerInr: 7, contributionMarginPct: 55 },
   "business-app:app-lead-form": { revenuePerCustomerInr: 350, variableCostPerCustomerInr: 20, contributionMarginPct: 60 },
+  "business-app:in-app-purchase": { revenuePerCustomerInr: 2000, variableCostPerCustomerInr: 100, contributionMarginPct: 65 },
+
   "travel-app:app-install": { revenuePerCustomerInr: 35, variableCostPerCustomerInr: 4, contributionMarginPct: 50 },
+  "travel-app:app-install-open": { revenuePerCustomerInr: 45, variableCostPerCustomerInr: 5, contributionMarginPct: 50 },
   "travel-app:app-lead-form": { revenuePerCustomerInr: 300, variableCostPerCustomerInr: 15, contributionMarginPct: 58 },
+  "travel-app:in-app-purchase": { revenuePerCustomerInr: 3500, variableCostPerCustomerInr: 150, contributionMarginPct: 60 },
 };
 
 const FALLBACK: EconomicsDefaults = { revenuePerCustomerInr: 1000, variableCostPerCustomerInr: 100, contributionMarginPct: 60 };
