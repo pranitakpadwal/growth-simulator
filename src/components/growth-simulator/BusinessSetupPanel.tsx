@@ -1,6 +1,6 @@
 "use client";
 
-import type { BudgetCadence, GoalDefinition, IndustryDefinition } from "@/lib/growth-simulator/types";
+import type { BudgetCadence, GoalDefinition, IndustryDefinition, Platform } from "@/lib/growth-simulator/types";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 import InfoTooltip from "./InfoTooltip";
 
@@ -10,6 +10,9 @@ interface Props {
   industries: IndustryDefinition[];
   industryId: string;
   onIndustryChange: (id: string) => void;
+
+  platform: Platform;
+  onPlatformChange: (p: Platform) => void;
 
   availableGoals: GoalDefinition[];
   goalId: string;
@@ -59,6 +62,8 @@ export default function BusinessSetupPanel({
   industries,
   industryId,
   onIndustryChange,
+  platform,
+  onPlatformChange,
   availableGoals,
   goalId,
   onGoalChange,
@@ -89,7 +94,7 @@ export default function BusinessSetupPanel({
   return (
     <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="font-display text-lg font-semibold text-foreground">What are you trying to achieve?</h2>
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs text-foreground/60">Industry</span>
           <select
@@ -103,6 +108,28 @@ export default function BusinessSetupPanel({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-xs text-foreground/60">Platform</span>
+          <div className="flex rounded border border-line p-0.5 text-sm">
+            <button
+              type="button"
+              onClick={() => onPlatformChange("website")}
+              className={`flex-1 rounded px-2 py-1 ${
+                platform === "website" ? "bg-brand text-white" : "text-foreground/60"
+              }`}
+            >
+              Website
+            </button>
+            <button
+              type="button"
+              onClick={() => onPlatformChange("app")}
+              className={`flex-1 rounded px-2 py-1 ${platform === "app" ? "bg-brand text-white" : "text-foreground/60"}`}
+            >
+              App
+            </button>
+          </div>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
