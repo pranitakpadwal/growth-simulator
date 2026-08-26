@@ -42,6 +42,14 @@ function initialCpcMap(group: "finance" | "app"): Record<ChannelId, { value: num
   return map;
 }
 
+function initialCtrMap(group: "finance" | "app"): Record<ChannelId, { value: number; valueClass: ValueClass }> {
+  const map = {} as Record<ChannelId, { value: number; valueClass: ValueClass }>;
+  for (const id of PAID_CHANNEL_IDS) {
+    map[id] = { value: getChannelBenchmark(group, id).ctr, valueClass: "benchmark" };
+  }
+  return map;
+}
+
 function initialStageMap(templateId: string, stages: { metricId: string }[]): Record<string, { value: number; valueClass: ValueClass }> {
   const map: Record<string, { value: number; valueClass: ValueClass }> = {};
   for (const stage of stages) {
@@ -85,6 +93,7 @@ export default function GrowthSimulator() {
 
   const initialTemplate = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
   const [channelCpc, setChannelCpc] = useState(() => initialCpcMap(getIndustry(industryId).group));
+  const [channelCtr, setChannelCtr] = useState(() => initialCtrMap(getIndustry(industryId).group));
   const [stageAssumptions, setStageAssumptions] = useState(() =>
     initialStageMap(initialTemplate.id, initialTemplate.stages)
   );
@@ -116,6 +125,7 @@ export default function GrowthSimulator() {
     setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
     setAudience(getAudiencePersona(nextIndustry.id));
     setChannelCpc(initialCpcMap(nextIndustry.group));
+    setChannelCtr(initialCtrMap(nextIndustry.group));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
   }
@@ -140,6 +150,10 @@ export default function GrowthSimulator() {
 
   function setStageValue(metricId: string, value: number) {
     setStageAssumptions((prev) => ({ ...prev, [metricId]: { value, valueClass: "actual" } }));
+  }
+
+  function setCtrValue(channelId: ChannelId, value: number) {
+    setChannelCtr((prev) => ({ ...prev, [channelId]: { value, valueClass: "actual" } }));
   }
 
   function setCpcValue(channelId: ChannelId, value: number) {
@@ -419,8 +433,12 @@ export default function GrowthSimulator() {
                 cpcValue={channelCpc["google-uac"].value}
                 cpcValueClass={channelCpc["google-uac"].valueClass}
                 onCpcChange={(v) => setCpcValue("google-uac", v)}
+                ctrValue={channelCtr["google-uac"].value}
+                ctrValueClass={channelCtr["google-uac"].valueClass}
+                onCtrChange={(v) => setCtrValue("google-uac", v)}
                 template={template}
                 stageAssumptions={stageAssumptionsPlain}
+                onStageRateChange={setStageValue}
                 targetCacInr={targetCacInr}
                 revenuePerCustomerInr={economics.revenuePerCustomerInr}
                 variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
@@ -451,8 +469,12 @@ export default function GrowthSimulator() {
                       cpcValue={channelCpc[channelId].value}
                       cpcValueClass={channelCpc[channelId].valueClass}
                       onCpcChange={(v) => setCpcValue(channelId, v)}
+                      ctrValue={channelCtr[channelId].value}
+                      ctrValueClass={channelCtr[channelId].valueClass}
+                      onCtrChange={(v) => setCtrValue(channelId, v)}
                       template={template}
                       stageAssumptions={stageAssumptionsPlain}
+                      onStageRateChange={setStageValue}
                       targetCacInr={targetCacInr}
                       revenuePerCustomerInr={economics.revenuePerCustomerInr}
                       variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
@@ -494,8 +516,12 @@ export default function GrowthSimulator() {
                   cpcValue={channelCpc[channelId].value}
                   cpcValueClass={channelCpc[channelId].valueClass}
                   onCpcChange={(v) => setCpcValue(channelId, v)}
+                  ctrValue={channelCtr[channelId].value}
+                  ctrValueClass={channelCtr[channelId].valueClass}
+                  onCtrChange={(v) => setCtrValue(channelId, v)}
                   template={template}
                   stageAssumptions={stageAssumptionsPlain}
+                  onStageRateChange={setStageValue}
                   targetCacInr={targetCacInr}
                   revenuePerCustomerInr={economics.revenuePerCustomerInr}
                   variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
@@ -522,6 +548,7 @@ export default function GrowthSimulator() {
           onOverrideRatePctChange={(v) => setOrganicField("seo", "overrideRatePct", v)}
           template={template}
           stageAssumptions={stageAssumptionsPlain}
+          onStageRateChange={setStageValue}
           revenuePerCustomerInr={economics.revenuePerCustomerInr}
           variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
           contributionMarginPct={economics.contributionMarginPct}
@@ -543,6 +570,7 @@ export default function GrowthSimulator() {
           onOverrideRatePctChange={(v) => setOrganicField("aso", "overrideRatePct", v)}
           template={template}
           stageAssumptions={stageAssumptionsPlain}
+          onStageRateChange={setStageValue}
           revenuePerCustomerInr={economics.revenuePerCustomerInr}
           variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
           contributionMarginPct={economics.contributionMarginPct}

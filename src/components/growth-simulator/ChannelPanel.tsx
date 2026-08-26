@@ -3,7 +3,7 @@
 import type { ChannelId, FunnelTemplate, IndustryGroup, ValueClass } from "@/lib/growth-simulator/types";
 import { getChannelBenchmark } from "@/lib/growth-simulator/benchmarks";
 import { runThreePaidScenarios, maxSustainableCpc, costLadder } from "@/lib/growth-simulator/engine";
-import { formatInrCompact, formatNumber, formatPct } from "@/lib/growth-simulator/format";
+import { formatInrCompact, formatNumber } from "@/lib/growth-simulator/format";
 import ScenarioTable from "./ScenarioTable";
 import CostLadder from "./CostLadder";
 import FunnelChart from "./FunnelChart";
@@ -18,15 +18,19 @@ interface Props {
   cpcValue: number;
   cpcValueClass: ValueClass;
   onCpcChange: (v: number) => void;
+  ctrValue: number;
+  ctrValueClass: ValueClass;
+  onCtrChange: (v: number) => void;
   template: FunnelTemplate;
   stageAssumptions: Record<string, number>;
+  onStageRateChange: (metricId: string, value: number) => void;
   targetCacInr: number | null;
   revenuePerCustomerInr: number;
   variableCostPerCustomerInr: number;
   contributionMarginPct: number;
 }
 
-/** One paid channel's tab body — CPC input, spend, and a three-case forecast through the shared funnel. */
+/** One paid channel's tab body — CPC/CTR inputs, spend, and a three-case forecast through the shared funnel. */
 export default function ChannelPanel({
   channelId,
   label,
@@ -35,8 +39,12 @@ export default function ChannelPanel({
   cpcValue,
   cpcValueClass,
   onCpcChange,
+  ctrValue,
+  ctrValueClass,
+  onCtrChange,
   template,
   stageAssumptions,
+  onStageRateChange,
   targetCacInr,
   revenuePerCustomerInr,
   variableCostPerCustomerInr,
@@ -44,7 +52,7 @@ export default function ChannelPanel({
 }: Props) {
   const benchmark = getChannelBenchmark(group, channelId);
   const estimatedClicks = cpcValue > 0 ? spendInr / cpcValue : 0;
-  const estimatedImpressions = benchmark.ctr > 0 ? estimatedClicks / (benchmark.ctr / 100) : 0;
+  const estimatedImpressions = ctrValue > 0 ? estimatedClicks / (ctrValue / 100) : 0;
 
   const forecasts = runThreePaidScenarios({
     channelId,
@@ -67,6 +75,8 @@ export default function ChannelPanel({
     ...forecasts.base.stages.map((s) => ({
       label: s.label,
       count: s.count,
+      rate: s.rate,
+      metricId: template.stages.find((st) => st.id === s.stageId)?.metricId,
       isValueStage: s.stageId === template.valueStageId,
     })),
   ];
@@ -101,15 +111,27 @@ export default function ChannelPanel({
             Benchmark {formatInrCompact(benchmark.cpcP25)}–{formatInrCompact(benchmark.cpcP75)}
           </div>
         </label>
-        <div className="rounded-lg border border-line bg-surface p-3">
-          <div className="text-xs uppercase tracking-wide text-foreground/50">Est. clicks / month</div>
-          <div className="mt-1 font-display text-lg font-semibold text-foreground">
-            {formatNumber(estimatedClicks)}
+        <label className="rounded-lg border border-line bg-surface p-3">
+          <div className="flex items-center justify-between text-xs uppercase tracking-wide text-foreground/50">
+            <span className="flex items-center">
+              CTR
+              <InfoTooltip term="ctr" />
+            </span>
+            <span className={ctrValueClass === "actual" ? "text-brand-dark" : "text-amber-700"}>
+              {ctrValueClass === "actual" ? "Actual" : "Benchmark"}
+            </span>
           </div>
+          <input
+            type="number"
+            value={ctrValue}
+            onChange={(e) => onCtrChange(Number(e.target.value))}
+            step="any"
+            className="mt-1 w-full rounded border border-line bg-background px-2 py-1 font-display text-lg font-semibold tabular-nums"
+          />
           <div className="mt-1 text-xs text-foreground/50">
-            ≈ {formatNumber(estimatedImpressions)} impressions at {formatPct(benchmark.ctr)} CTR
+            ≈ {formatNumber(estimatedImpressions)} impressions/mo at this CTR
           </div>
-        </div>
+        </label>
         <div className="rounded-lg border border-line bg-surface p-3">
           <div className="text-xs uppercase tracking-wide text-foreground/50">Source</div>
           <div className="mt-1 text-xs text-foreground/70">{benchmark.source}</div>
@@ -131,7 +153,7 @@ export default function ChannelPanel({
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <FunnelChart stages={funnelStages} />
+        <FunnelChart stages={funnelStages} onRateChange={onStageRateChange} />
         <CostLadder rungs={rungs} cpc={cpcValue} />
       </div>
 
