@@ -4,18 +4,22 @@ import type {
   FunnelTemplate,
   GoalDefinition,
   IndustryDefinition,
+  Platform,
 } from "./types";
 
 /**
- * The "clever defaults" layer: the business only has to pick an Industry
- * and a Goal (plus budget or a target, and an optional CAC ceiling) — the
- * tool figures out which funnel shape and channel benchmarks apply.
- * Everything below is still fully overridable in the UI.
+ * The "clever defaults" layer: the business only has to pick an Industry,
+ * a Platform (Website or App), and a Goal (plus budget or a target, and an
+ * optional CAC ceiling) — the tool figures out which funnel shape and
+ * channel benchmarks apply. Everything below is still fully overridable
+ * in the UI.
  *
- * Goals are named as the literal, single action a campaign manager is
- * actually buying media for — "Install the App", "Register on Website" —
- * not a merged concept, since a web lead form and an in-app lead form are
- * different funnels bought through different channels.
+ * Industry and Platform are deliberately separate dimensions. A personal
+ * loan company might run its funnel through its website, its app, or
+ * both — baking "App" into the industry name (as an earlier version of
+ * this catalog did) hid that choice and silently limited which goals an
+ * industry could offer. Goals are still named as the literal, single
+ * action a campaign manager is buying media for.
  */
 
 // ---------------------------------------------------------------------------
@@ -208,72 +212,81 @@ export function resolveFunnelTemplate(industryId: string, goalId: string): Funne
 // Industries
 // ---------------------------------------------------------------------------
 
-const LEAD_FORM_GOALS = ["website-lead-form", "website-click"] as const;
-const APP_GOALS = ["app-install", "app-install-open", "app-lead-form", "in-app-purchase", "website-click"] as const;
+const APP_GOALS_STANDARD = ["app-install", "app-install-open", "app-lead-form"] as const;
+const APP_GOALS_WITH_PURCHASE = ["app-install", "app-install-open", "app-lead-form", "in-app-purchase"] as const;
 
 export const INDUSTRIES: IndustryDefinition[] = [
   {
     id: "personal-loans",
     label: "Personal Loans",
     group: "finance",
-    defaultGoalId: "website-lead-form",
-    goalIds: [...LEAD_FORM_GOALS],
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-lead-form", "website-click"],
+    appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
     id: "emi-calculator",
     label: "EMI Calculator",
     group: "finance",
-    defaultGoalId: "website-lead-form",
-    goalIds: ["website-lead-form", "use-calculator", "website-click"],
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-lead-form", "use-calculator", "website-click"],
+    appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
     id: "epf",
     label: "EPF (Withdrawal / Transfer Assistance)",
     group: "finance",
-    defaultGoalId: "website-lead-form",
-    goalIds: [...LEAD_FORM_GOALS],
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-lead-form", "website-click"],
+    appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
     id: "credit-cards",
     label: "Credit Cards",
     group: "finance",
-    defaultGoalId: "website-lead-form",
-    goalIds: [...LEAD_FORM_GOALS],
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-lead-form", "website-click"],
+    appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
     id: "investments",
     label: "Investments",
     group: "finance",
-    defaultGoalId: "website-lead-form",
-    goalIds: ["website-lead-form", "website-registration", "website-click"],
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-lead-form", "website-registration", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
-    id: "news-app",
-    label: "News / Content App",
+    id: "news",
+    label: "News / Content",
     group: "app",
-    defaultGoalId: "app-install",
-    goalIds: [...APP_GOALS],
+    defaultPlatform: "app",
+    websiteGoalIds: ["website-registration", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
-    id: "social-app",
-    label: "Social / Friends App",
+    id: "social",
+    label: "Social / Community",
     group: "app",
-    defaultGoalId: "app-install",
-    goalIds: [...APP_GOALS],
+    defaultPlatform: "app",
+    websiteGoalIds: ["website-registration", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
-    id: "business-app",
-    label: "Business App",
+    id: "business",
+    label: "Business / Productivity",
     group: "app",
-    defaultGoalId: "app-install",
-    goalIds: [...APP_GOALS],
+    defaultPlatform: "app",
+    websiteGoalIds: ["website-registration", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
-    id: "travel-app",
-    label: "Travel App",
+    id: "travel",
+    label: "Travel",
     group: "app",
-    defaultGoalId: "app-install",
-    goalIds: [...APP_GOALS],
+    defaultPlatform: "app",
+    websiteGoalIds: ["website-registration", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
 ];
 
@@ -281,6 +294,12 @@ export function getIndustry(id: string): IndustryDefinition {
   const industry = INDUSTRIES.find((i) => i.id === id);
   if (!industry) throw new Error(`Unknown industry: ${id}`);
   return industry;
+}
+
+/** Goals available for an industry under a given platform. */
+export function goalsForPlatform(industry: IndustryDefinition, platform: Platform): GoalDefinition[] {
+  const ids = platform === "website" ? industry.websiteGoalIds : industry.appGoalIds;
+  return ids.map((id) => GOALS[id]);
 }
 
 // ---------------------------------------------------------------------------

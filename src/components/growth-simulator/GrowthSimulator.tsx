@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ChannelId, ChannelTabId, GoalId, IndustryId, ValueClass } from "@/lib/growth-simulator/types";
-import { GOALS, INDUSTRIES, channelsForGoal, getChannel, getIndustry, resolveFunnelTemplate } from "@/lib/growth-simulator/catalog";
+import type { ChannelId, ChannelTabId, GoalId, IndustryId, Platform, ValueClass } from "@/lib/growth-simulator/types";
+import { INDUSTRIES, channelsForGoal, getChannel, getIndustry, goalsForPlatform, resolveFunnelTemplate } from "@/lib/growth-simulator/catalog";
 import { getChannelBenchmark, getFunnelBenchmark } from "@/lib/growth-simulator/benchmarks";
 import { defaultEconomics, type EconomicsDefaults } from "@/lib/growth-simulator/defaults";
 import {
@@ -52,7 +52,10 @@ const TAB_LABEL: Record<ChannelTabId | "summary", string> = {
 
 export default function GrowthSimulator() {
   const [industryId, setIndustryId] = useState<IndustryId>("personal-loans");
-  const [goalId, setGoalId] = useState<GoalId>(getIndustry("personal-loans").defaultGoalId);
+  const [platform, setPlatform] = useState<Platform>(getIndustry("personal-loans").defaultPlatform);
+  const [goalId, setGoalId] = useState<GoalId>(
+    goalsForPlatform(getIndustry("personal-loans"), getIndustry("personal-loans").defaultPlatform)[0].id
+  );
   const [planMode, setPlanMode] = useState<PlanMode>("budget");
   const [cadence, setCadence] = useState<BudgetCadence>("monthly");
   const [budgetInputValue, setBudgetInputValue] = useState(500000); // ₹5L
@@ -77,7 +80,7 @@ export default function GrowthSimulator() {
   const [audience, setAudience] = useState<AudiencePersona>(() => getAudiencePersona(industryId));
 
   const industry = useMemo(() => getIndustry(industryId), [industryId]);
-  const availableGoals = useMemo(() => industry.goalIds.map((id) => GOALS[id]), [industry]);
+  const availableGoals = useMemo(() => goalsForPlatform(industry, platform), [industry, platform]);
   const template = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
   const visibleChannels = useMemo(() => channelsForGoal(goalId), [goalId]);
   const visibleTabs = useMemo(() => {
@@ -87,13 +90,25 @@ export default function GrowthSimulator() {
 
   function handleIndustryChange(id: string) {
     const nextIndustry = getIndustry(id);
-    const nextGoalId = nextIndustry.defaultGoalId;
+    const nextPlatform = nextIndustry.defaultPlatform;
+    const nextGoalId = goalsForPlatform(nextIndustry, nextPlatform)[0].id;
     const nextTemplate = resolveFunnelTemplate(id, nextGoalId);
     setIndustryId(nextIndustry.id);
+    setPlatform(nextPlatform);
     setGoalId(nextGoalId);
     setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
     setAudience(getAudiencePersona(nextIndustry.id));
     setChannelCpc(initialCpcMap(nextIndustry.group));
+    setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
+    setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
+  }
+
+  function handlePlatformChange(next: Platform) {
+    const nextGoalId = goalsForPlatform(industry, next)[0].id;
+    const nextTemplate = resolveFunnelTemplate(industryId, nextGoalId);
+    setPlatform(next);
+    setGoalId(nextGoalId);
+    setEconomics(defaultEconomics(industryId, nextGoalId));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
   }
@@ -281,6 +296,8 @@ export default function GrowthSimulator() {
         industries={INDUSTRIES}
         industryId={industryId}
         onIndustryChange={handleIndustryChange}
+        platform={platform}
+        onPlatformChange={handlePlatformChange}
         availableGoals={availableGoals}
         goalId={goalId}
         onGoalChange={handleGoalChange}

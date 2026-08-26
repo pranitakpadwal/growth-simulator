@@ -70,13 +70,26 @@ export type IndustryId =
   | "epf"
   | "credit-cards"
   | "investments"
-  | "news-app"
-  | "social-app"
-  | "business-app"
-  | "travel-app";
+  | "news"
+  | "social"
+  | "business"
+  | "travel";
 
-/** Groups drive which channel CPC/CTR benchmark set applies (finance vs. app). */
+/**
+ * Content-vertical proxy for channel CPC/CTR selection (finance keywords
+ * price differently to general-consumer ones) — an internal key only,
+ * never rendered. Orthogonal to `Platform`: an industry's vertical doesn't
+ * change when you switch it from Website to App.
+ */
 export type IndustryGroup = "finance" | "app";
+
+/**
+ * Website vs. App — a business decision independent of industry. A
+ * personal loan company can run its funnel through its website, its app,
+ * or both; "News App" baking the platform into the industry name was the
+ * bug this type fixes.
+ */
+export type Platform = "website" | "app";
 
 export type GoalId =
   | "website-lead-form"
@@ -99,10 +112,12 @@ export interface IndustryDefinition {
   id: IndustryId;
   label: string;
   group: IndustryGroup;
-  /** The goal we pre-select for this industry — still fully overridable. */
-  defaultGoalId: GoalId;
-  /** Which goals make sense to offer for this industry. */
-  goalIds: GoalId[];
+  /** Which platform we pre-select — still fully switchable in the UI. */
+  defaultPlatform: Platform;
+  /** Goals offered when Platform = Website. */
+  websiteGoalIds: GoalId[];
+  /** Goals offered when Platform = App. */
+  appGoalIds: GoalId[];
 }
 
 /** One stage in a funnel template — converts FROM the previous stage's count. */
