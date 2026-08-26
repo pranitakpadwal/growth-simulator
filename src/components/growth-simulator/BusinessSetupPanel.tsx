@@ -2,6 +2,7 @@
 
 import type { BudgetCadence, GoalDefinition, IndustryDefinition } from "@/lib/growth-simulator/types";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
+import InfoTooltip from "./InfoTooltip";
 
 export type PlanMode = "budget" | "goal";
 
@@ -122,8 +123,9 @@ export default function BusinessSetupPanel({
 
         <div className="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-foreground/60">
+            <span className="flex items-center text-xs text-foreground/60">
               {planMode === "budget" ? "Budget" : `Target ${valueLabel.toLowerCase()} / month`}
+              <InfoTooltip term={planMode === "budget" ? "budgetCadence" : "planByGoal"} />
             </span>
             <div className="flex rounded-full border border-line p-0.5 text-[11px]">
               <button
@@ -194,7 +196,10 @@ export default function BusinessSetupPanel({
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs text-foreground/60">Target CAC (optional)</span>
+          <span className="flex items-center text-xs text-foreground/60">
+            Target CAC (optional)
+            <InfoTooltip term="targetCac" />
+          </span>
           <input
             type="number"
             value={targetCacInput}
@@ -228,7 +233,10 @@ export default function BusinessSetupPanel({
       {hasRevenue && (
         <div className="mt-4 grid grid-cols-2 gap-4 border-t border-line pt-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-foreground/60">Revenue / {valueLabel.toLowerCase().replace(/s$/, "")} (₹)</span>
+            <span className="flex items-center text-xs text-foreground/60">
+              Revenue / {valueLabel.toLowerCase().replace(/s$/, "")} (₹)
+              <InfoTooltip term="revenuePerConversion" />
+            </span>
             <input
               type="number"
               value={revenuePerCustomerInr}
@@ -238,7 +246,10 @@ export default function BusinessSetupPanel({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-foreground/60">Variable cost / conversion (₹)</span>
+            <span className="flex items-center text-xs text-foreground/60">
+              Variable cost / conversion (₹)
+              <InfoTooltip term="variableCost" />
+            </span>
             <input
               type="number"
               value={variableCostPerCustomerInr}
@@ -248,7 +259,10 @@ export default function BusinessSetupPanel({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-foreground/60">Contribution margin (%)</span>
+            <span className="flex items-center text-xs text-foreground/60">
+              Contribution margin (%)
+              <InfoTooltip term="contributionMargin" />
+            </span>
             <input
               type="number"
               value={contributionMarginPct}

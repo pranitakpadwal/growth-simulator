@@ -78,7 +78,15 @@ export type IndustryId =
 /** Groups drive which channel CPC/CTR benchmark set applies (finance vs. app). */
 export type IndustryGroup = "finance" | "app";
 
-export type GoalId = "website-lead-form" | "app-install" | "app-lead-form" | "website-registration" | "website-click";
+export type GoalId =
+  | "website-lead-form"
+  | "app-install"
+  | "app-install-open"
+  | "app-lead-form"
+  | "in-app-purchase"
+  | "use-calculator"
+  | "website-registration"
+  | "website-click";
 
 export interface GoalDefinition {
   id: GoalId;
