@@ -138,6 +138,36 @@ export const FUNNEL_TEMPLATES: Record<string, FunnelTemplate> = {
     hasRevenue: true,
     valueLabel: "Calculator uses",
   },
+  "website-purchase": {
+    id: "website-purchase",
+    label: "Engaged Visit → Purchase",
+    stages: [
+      { id: "engaged-visit", label: "Engaged visits", metricId: "engagedVisitRate" },
+      { id: "purchase", label: "Purchases", metricId: "websitePurchaseRate" },
+    ],
+    valueStageId: "purchase",
+    hasRevenue: true,
+    valueLabel: "Purchases",
+  },
+  "click-to-call": {
+    id: "click-to-call",
+    label: "Engaged Visit → Phone Call",
+    stages: [
+      { id: "engaged-visit", label: "Engaged visits", metricId: "engagedVisitRate" },
+      { id: "call", label: "Calls", metricId: "clickToCallRate" },
+    ],
+    valueStageId: "call",
+    hasRevenue: true,
+    valueLabel: "Calls",
+  },
+  "app-reengagement": {
+    id: "app-reengagement",
+    label: "Click → App Reopened",
+    stages: [{ id: "reopen", label: "Re-engaged users", metricId: "reengagementRate" }],
+    valueStageId: "reopen",
+    hasRevenue: true,
+    valueLabel: "Re-engaged users",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -193,10 +223,44 @@ export const GOALS: Record<string, GoalDefinition> = {
     description: "Get visitors to actually run a calculation — a mid-funnel engagement goal, not a lead yet.",
     funnelTemplateId: "use-calculator",
   },
+  "website-purchase": {
+    id: "website-purchase",
+    label: "Website Purchase",
+    description: "Drive a completed purchase or transaction directly on the website.",
+    funnelTemplateId: "website-purchase",
+  },
+  "click-to-call": {
+    id: "click-to-call",
+    label: "Click to Call",
+    description: "Drive a phone call to your sales/support line — a major BFSI lead channel alongside web forms.",
+    funnelTemplateId: "click-to-call",
+  },
+  "app-reengagement": {
+    id: "app-reengagement",
+    label: "App Re-engagement",
+    description: "Win back existing, lapsed app users instead of acquiring new ones — a cheaper, different audience.",
+    funnelTemplateId: "app-reengagement",
+  },
 };
 
-/** The goals that put an app in the customer's hands — used to gate ASO's visibility. */
-const APP_GOAL_IDS = new Set(["app-install", "app-install-open", "app-lead-form", "in-app-purchase"]);
+/**
+ * Goals that acquire a NEW app user via the store listing — used to gate
+ * ASO's visibility (re-engagement targets people who already have the app,
+ * so it has no store-listing funnel and doesn't belong on the ASO tab).
+ */
+const APP_ACQUISITION_GOAL_IDS = new Set(["app-install", "app-install-open", "app-lead-form", "in-app-purchase"]);
+
+/**
+ * Goals Google sells as an App Campaign (formerly UAC) rather than as
+ * separately-bought Search/Display/YouTube — every app-flavoured goal,
+ * including re-engagement (Google runs that as an App campaign variant
+ * too). Drives which channels the Google tab shows.
+ */
+const GOOGLE_UAC_GOAL_IDS = new Set([...APP_ACQUISITION_GOAL_IDS, "app-reengagement"]);
+
+export function isGoogleUacGoal(goalId: string): boolean {
+  return GOOGLE_UAC_GOAL_IDS.has(goalId);
+}
 
 /** Per-industry override: "Website Lead Form" resolves to a different template for lending vs. investment products. */
 export function resolveFunnelTemplate(industryId: string, goalId: string): FunnelTemplate {
@@ -212,8 +276,14 @@ export function resolveFunnelTemplate(industryId: string, goalId: string): Funne
 // Industries
 // ---------------------------------------------------------------------------
 
-const APP_GOALS_STANDARD = ["app-install", "app-install-open", "app-lead-form"] as const;
-const APP_GOALS_WITH_PURCHASE = ["app-install", "app-install-open", "app-lead-form", "in-app-purchase"] as const;
+const APP_GOALS_STANDARD = ["app-install", "app-install-open", "app-lead-form", "app-reengagement"] as const;
+const APP_GOALS_WITH_PURCHASE = [
+  "app-install",
+  "app-install-open",
+  "app-lead-form",
+  "in-app-purchase",
+  "app-reengagement",
+] as const;
 
 export const INDUSTRIES: IndustryDefinition[] = [
   {
@@ -221,7 +291,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "Personal Loans",
     group: "finance",
     defaultPlatform: "website",
-    websiteGoalIds: ["website-lead-form", "website-click"],
+    websiteGoalIds: ["website-lead-form", "click-to-call", "website-click"],
     appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
@@ -237,7 +307,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "EPF (Withdrawal / Transfer Assistance)",
     group: "finance",
     defaultPlatform: "website",
-    websiteGoalIds: ["website-lead-form", "website-click"],
+    websiteGoalIds: ["website-lead-form", "click-to-call", "website-click"],
     appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
@@ -245,7 +315,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "Credit Cards",
     group: "finance",
     defaultPlatform: "website",
-    websiteGoalIds: ["website-lead-form", "website-click"],
+    websiteGoalIds: ["website-lead-form", "click-to-call", "website-click"],
     appGoalIds: [...APP_GOALS_STANDARD],
   },
   {
@@ -253,7 +323,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "Investments",
     group: "finance",
     defaultPlatform: "website",
-    websiteGoalIds: ["website-lead-form", "website-registration", "website-click"],
+    websiteGoalIds: ["website-lead-form", "website-registration", "website-purchase", "website-click"],
     appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
@@ -285,7 +355,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "Travel",
     group: "app",
     defaultPlatform: "app",
-    websiteGoalIds: ["website-registration", "website-click"],
+    websiteGoalIds: ["website-registration", "website-purchase", "website-click"],
     appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
 ];
@@ -310,7 +380,9 @@ export const CHANNELS: ChannelMeta[] = [
   { id: "google-search", label: "Google Search", tab: "google", isOrganic: false },
   { id: "google-display", label: "Google Display", tab: "google", isOrganic: false },
   { id: "youtube", label: "YouTube", tab: "google", isOrganic: false },
-  { id: "meta", label: "Meta", tab: "meta", isOrganic: false },
+  { id: "google-uac", label: "Google App Campaigns (UAC)", tab: "google", isOrganic: false },
+  { id: "facebook", label: "Facebook", tab: "meta", isOrganic: false },
+  { id: "instagram", label: "Instagram", tab: "meta", isOrganic: false },
   { id: "seo", label: "SEO", tab: "seo", isOrganic: true },
   { id: "aso", label: "ASO (App Store Optimization)", tab: "aso", isOrganic: true, appOnly: true },
 ];
@@ -321,7 +393,21 @@ export function getChannel(id: ChannelId): ChannelMeta {
   return channel;
 }
 
-/** Channels visible for the current goal — ASO only shows up for an app-acquisition goal. */
+const GOOGLE_SPLIT_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display", "youtube"];
+
+/**
+ * Channels visible for the current goal:
+ * - ASO only for goals that acquire a new app user via the store listing.
+ * - Google shows either the Search/Display/YouTube split (website-style
+ *   buying) OR the single App Campaigns channel (app-style buying),
+ *   never both — see isGoogleUacGoal().
+ */
 export function channelsForGoal(goalId: string): ChannelMeta[] {
-  return CHANNELS.filter((c) => !c.appOnly || APP_GOAL_IDS.has(goalId));
+  const uac = isGoogleUacGoal(goalId);
+  return CHANNELS.filter((c) => {
+    if (c.appOnly && !APP_ACQUISITION_GOAL_IDS.has(goalId)) return false;
+    if (c.id === "google-uac" && !uac) return false;
+    if (GOOGLE_SPLIT_CHANNEL_IDS.includes(c.id) && uac) return false;
+    return true;
+  });
 }
