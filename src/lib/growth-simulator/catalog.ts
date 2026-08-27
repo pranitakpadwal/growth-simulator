@@ -358,6 +358,14 @@ export const INDUSTRIES: IndustryDefinition[] = [
     websiteGoalIds: ["website-registration", "website-purchase", "website-click"],
     appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
+  {
+    id: "events",
+    label: "Events / Ticketing",
+    group: "app",
+    defaultPlatform: "website",
+    websiteGoalIds: ["website-registration", "website-purchase", "website-click"],
+    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
+  },
 ];
 
 export function getIndustry(id: string): IndustryDefinition {

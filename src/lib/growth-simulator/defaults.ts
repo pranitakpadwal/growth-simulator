@@ -39,6 +39,12 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "credit-cards:click-to-call": { revenuePerCustomerInr: 5000, variableCostPerCustomerInr: 480, contributionMarginPct: 70 },
   "investments:website-purchase": { revenuePerCustomerInr: 1500, variableCostPerCustomerInr: 100, contributionMarginPct: 65 },
   "travel:website-purchase": { revenuePerCustomerInr: 4000, variableCostPerCustomerInr: 300, contributionMarginPct: 55 },
+  "events:website-purchase": { revenuePerCustomerInr: 800, variableCostPerCustomerInr: 60, contributionMarginPct: 60 },
+  "events:website-registration": { revenuePerCustomerInr: 150, variableCostPerCustomerInr: 10, contributionMarginPct: 55 },
+  "news:website-registration": { revenuePerCustomerInr: 60, variableCostPerCustomerInr: 5, contributionMarginPct: 50 },
+  "social:website-registration": { revenuePerCustomerInr: 40, variableCostPerCustomerInr: 4, contributionMarginPct: 45 },
+  "business:website-registration": { revenuePerCustomerInr: 300, variableCostPerCustomerInr: 20, contributionMarginPct: 58 },
+  "travel:website-registration": { revenuePerCustomerInr: 100, variableCostPerCustomerInr: 8, contributionMarginPct: 52 },
 
   // Finance industries on the App platform — same verticals, lower-intent
   // stages (install, first open) are worth less than the full web funnel's
@@ -81,6 +87,11 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "travel:app-lead-form": { revenuePerCustomerInr: 300, variableCostPerCustomerInr: 15, contributionMarginPct: 58 },
   "travel:in-app-purchase": { revenuePerCustomerInr: 3500, variableCostPerCustomerInr: 150, contributionMarginPct: 60 },
 
+  "events:app-install": { revenuePerCustomerInr: 30, variableCostPerCustomerInr: 3, contributionMarginPct: 50 },
+  "events:app-install-open": { revenuePerCustomerInr: 45, variableCostPerCustomerInr: 4, contributionMarginPct: 50 },
+  "events:app-lead-form": { revenuePerCustomerInr: 200, variableCostPerCustomerInr: 12, contributionMarginPct: 55 },
+  "events:in-app-purchase": { revenuePerCustomerInr: 900, variableCostPerCustomerInr: 70, contributionMarginPct: 60 },
+
   // App re-engagement — a lapsed-user win-back, not a new acquisition, so
   // valued below the corresponding app-lead-form/in-app-purchase entry.
   "personal-loans:app-reengagement": { revenuePerCustomerInr: 600, variableCostPerCustomerInr: 40, contributionMarginPct: 62 },
@@ -92,6 +103,7 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "social:app-reengagement": { revenuePerCustomerInr: 100, variableCostPerCustomerInr: 7, contributionMarginPct: 50 },
   "business:app-reengagement": { revenuePerCustomerInr: 250, variableCostPerCustomerInr: 15, contributionMarginPct: 60 },
   "travel:app-reengagement": { revenuePerCustomerInr: 220, variableCostPerCustomerInr: 12, contributionMarginPct: 55 },
+  "events:app-reengagement": { revenuePerCustomerInr: 130, variableCostPerCustomerInr: 8, contributionMarginPct: 55 },
 };
 
 const FALLBACK: EconomicsDefaults = { revenuePerCustomerInr: 1000, variableCostPerCustomerInr: 100, contributionMarginPct: 60 };
