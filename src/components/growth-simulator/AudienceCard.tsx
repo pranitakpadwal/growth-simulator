@@ -1,9 +1,13 @@
 "use client";
 
 import { estimateReach, type AudiencePersona } from "@/lib/growth-simulator/audience";
+import { formatNumber } from "@/lib/growth-simulator/format";
 
 /** Google/Meta ads' own standard age-bracket cutoffs — matches how you'd actually set age targeting. */
 const AGE_BRACKETS = [13, 18, 21, 25, 30, 35, 40, 45, 50, 55, 60, 65];
+
+/** Above this many impressions per person per month, the plan is implying an implausible amount of repetition. */
+const HIGH_FREQUENCY_WARNING_THRESHOLD = 20;
 
 /**
  * "Who are you targeting?" — the step between reach and cost that a plan
@@ -16,15 +20,26 @@ const AGE_BRACKETS = [13, 18, 21, 25, 30, 35, 40, 45, 50, 55, 60, 65];
 export default function AudienceCard({
   persona,
   onChange,
+  monthlyImpressions,
 }: {
   persona: AudiencePersona;
   onChange: (next: AudiencePersona) => void;
+  /**
+   * Total monthly impressions across every paid channel — derived purely
+   * from your own CPC/CTR inputs (impressions = clicks ÷ CTR), NOT from
+   * this card's reach estimate. The two numbers are independent, so they
+   * can disagree — shown together here, with a frequency check, instead
+   * of leaving that disagreement invisible.
+   */
+  monthlyImpressions?: number;
 }) {
   function set<K extends keyof AudiencePersona>(key: K, value: AudiencePersona[K]) {
     onChange({ ...persona, [key]: value });
   }
 
   const reach = estimateReach(persona);
+  const reachAvg = ((reach.lowM + reach.highM) / 2) * 1_000_000;
+  const frequency = monthlyImpressions && reachAvg > 0 ? monthlyImpressions / reachAvg : null;
 
   return (
     <div className="rounded-lg border border-line bg-surface p-4">
@@ -108,6 +123,32 @@ export default function AudienceCard({
         .
       </p>
       <p className="mt-1 text-xs text-foreground/50">{persona.notes}</p>
+      {monthlyImpressions != null && monthlyImpressions > 0 && (
+        <p
+          className={`mt-2 text-xs ${
+            frequency != null && frequency > HIGH_FREQUENCY_WARNING_THRESHOLD
+              ? "text-amber-700"
+              : "text-foreground/50"
+          }`}
+        >
+          <strong className={frequency != null && frequency > HIGH_FREQUENCY_WARNING_THRESHOLD ? "" : "text-foreground/70"}>
+            Impressions check:{" "}
+          </strong>
+          your current channel mix generates ≈{formatNumber(monthlyImpressions)} impressions/month — derived from
+          your own CPC/CTR inputs, not from the reach figure above.
+          {frequency != null &&
+            (frequency > HIGH_FREQUENCY_WARNING_THRESHOLD ? (
+              <>
+                {" "}
+                That&apos;s ≈{frequency.toFixed(1)}× per person in your {reach.lowM}–{reach.highM}M audience — an
+                unusually high frequency. Either this budget is reaching well beyond the persona defined above, or
+                your CTR/CPC assumptions are optimistic — worth sense-checking both.
+              </>
+            ) : (
+              <> That&apos;s ≈{frequency.toFixed(1)}× per person across your {reach.lowM}–{reach.highM}M audience.</>
+            ))}
+        </p>
+      )}
     </div>
   );
 }
