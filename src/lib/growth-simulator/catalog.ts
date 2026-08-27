@@ -94,6 +94,23 @@ export const FUNNEL_TEMPLATES: Record<string, FunnelTemplate> = {
     hasRevenue: true,
     valueLabel: "Registrations",
   },
+  // Same shape as above, but for registration flows OUTSIDE fintech (News,
+  // Social, Business, Travel, Events) — a fintech account-opening funnel and
+  // a free-content or event-ticketing signup do not convert at the same
+  // rate, and reusing one number for both was overstating volume for every
+  // non-finance industry. See `genericSiteRegistrationRate` in benchmarks.ts.
+  "website-registration-generic": {
+    id: "website-registration-generic",
+    label: "Engaged Visit → Registration → Activation",
+    stages: [
+      { id: "engaged-visit", label: "Engaged visits", metricId: "engagedVisitRate" },
+      { id: "registration", label: "Registrations", metricId: "genericSiteRegistrationRate" },
+      { id: "activation", label: "Activated users", metricId: "activationRate" },
+    ],
+    valueStageId: "registration",
+    hasRevenue: true,
+    valueLabel: "Registrations",
+  },
   "website-click": {
     id: "website-click",
     label: "Engaged Visit (awareness / traffic)",
@@ -268,6 +285,15 @@ export function resolveFunnelTemplate(industryId: string, goalId: string): Funne
     return industryId === "investments"
       ? FUNNEL_TEMPLATES["website-lead-form-investment"]
       : FUNNEL_TEMPLATES["website-lead-form-lending"];
+  }
+  // "Register on Website" — Investments keeps the fintech-flavoured
+  // registration benchmark (account-opening intent); every other industry
+  // uses the lower, non-finance registration benchmark instead of a
+  // one-size-fits-all number (see `website-registration-generic` above).
+  if (goalId === "website-registration") {
+    return industryId === "investments"
+      ? FUNNEL_TEMPLATES["website-registration"]
+      : FUNNEL_TEMPLATES["website-registration-generic"];
   }
   return FUNNEL_TEMPLATES[GOALS[goalId].funnelTemplateId];
 }

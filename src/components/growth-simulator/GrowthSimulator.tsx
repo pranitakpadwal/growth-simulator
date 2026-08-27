@@ -94,7 +94,22 @@ export default function GrowthSimulator() {
   const [displayPct, setDisplayPct] = useState(20);
   const [youtubePct, setYoutubePct] = useState(25);
   const [facebookPct, setFacebookPct] = useState(60);
+  // Sub-channels a user can switch off entirely — "I don't want to run
+  // YouTube, only Search" — rather than fiddling percentages down to 0.
+  // Missing from the map = enabled (default); only Search/Display/YouTube
+  // and Facebook/Instagram are togglable, since those are the ones bought
+  // as a deliberate split — Google App Campaigns (UAC) is already a single
+  // auto-placed channel with nothing to split.
+  const [channelEnabled, setChannelEnabled] = useState<Partial<Record<ChannelId, boolean>>>({});
   const [activeTab, setActiveTab] = useState<ChannelTabId | "summary">("google");
+
+  function isChannelEnabled(id: ChannelId): boolean {
+    return channelEnabled[id] ?? true;
+  }
+
+  function toggleChannelEnabled(id: ChannelId) {
+    setChannelEnabled((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  }
 
   const initialTemplate = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
   const [channelCpc, setChannelCpc] = useState(() => initialCpcMap(getIndustry(industryId).group));
@@ -103,9 +118,15 @@ export default function GrowthSimulator() {
     initialStageMap(initialTemplate.id, initialTemplate.stages)
   );
   const [economics, setEconomics] = useState<EconomicsDefaults>(() => defaultEconomics(industryId, goalId));
+  // Organic entry volume has no benchmark behind it — it's literally
+  // whatever traffic/store-listing-visits YOUR site/app already gets,
+  // which this tool has no way to know. Defaulting it to a nonzero number
+  // was quietly adding hundreds of "free" conversions to every plan before
+  // the user touched anything — the opposite of "no number without
+  // provenance." Starts at 0; the user enters their own real number.
   const [organic, setOrganic] = useState<{ seo: OrganicState; aso: OrganicState }>({
-    seo: { entryVolume: 20000, investmentInr: 0, overrideEnabled: false, overrideRatePct: 5 },
-    aso: { entryVolume: 5000, investmentInr: 0, overrideEnabled: false, overrideRatePct: 8 },
+    seo: { entryVolume: 0, investmentInr: 0, overrideEnabled: false, overrideRatePct: 5 },
+    aso: { entryVolume: 0, investmentInr: 0, overrideEnabled: false, overrideRatePct: 8 },
   });
   const [audience, setAudience] = useState<AudiencePersona>(() => getAudiencePersona(industryId));
 
@@ -182,29 +203,44 @@ export default function GrowthSimulator() {
     return plain;
   }, [stageAssumptions]);
 
-  const googleSubSplitSum = searchPct + displayPct + youtubePct || 1;
+  // Effective sub-split % — a disabled channel contributes 0 and its share
+  // is redistributed across whichever sub-channels are still enabled,
+  // without losing the user's original slider position (re-enabling
+  // restores it).
+  const effSearchPct = isChannelEnabled("google-search") ? searchPct : 0;
+  const effDisplayPct = isChannelEnabled("google-display") ? displayPct : 0;
+  const effYoutubePct = isChannelEnabled("youtube") ? youtubePct : 0;
+  const googleSubSplitSum = effSearchPct + effDisplayPct + effYoutubePct || 1;
+  const effFacebookPct = isChannelEnabled("facebook") ? facebookPct : 0;
+  const effInstagramPct = isChannelEnabled("instagram") ? 100 - facebookPct : 0;
+  const metaSubSplitSum = effFacebookPct + effInstagramPct || 1;
+
   const channelWeights: PaidChannelWeight[] = [
     {
       channelId: "google-search",
       cpc: channelCpc["google-search"].value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (searchPct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : googlePct * (effSearchPct / googleSubSplitSum),
     },
     {
       channelId: "google-display",
       cpc: channelCpc["google-display"].value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (displayPct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : googlePct * (effDisplayPct / googleSubSplitSum),
     },
     {
       channelId: "youtube",
       cpc: channelCpc.youtube.value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (youtubePct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : googlePct * (effYoutubePct / googleSubSplitSum),
     },
     { channelId: "google-uac", cpc: channelCpc["google-uac"].value, sharePct: usesGoogleUac ? googlePct : 0 },
-    { channelId: "facebook", cpc: channelCpc.facebook.value, sharePct: (100 - googlePct) * (facebookPct / 100) },
+    {
+      channelId: "facebook",
+      cpc: channelCpc.facebook.value,
+      sharePct: (100 - googlePct) * (effFacebookPct / metaSubSplitSum),
+    },
     {
       channelId: "instagram",
       cpc: channelCpc.instagram.value,
-      sharePct: (100 - googlePct) * ((100 - facebookPct) / 100),
+      sharePct: (100 - googlePct) * (effInstagramPct / metaSubSplitSum),
     },
   ];
 
@@ -228,6 +264,7 @@ export default function GrowthSimulator() {
       youtubePct,
       facebookPct,
       usesGoogleUac,
+      channelEnabled,
     ]
   );
 
@@ -236,12 +273,12 @@ export default function GrowthSimulator() {
 
   const googleBudget = monthlyBudgetInr * (googlePct / 100);
   const metaBudget = monthlyBudgetInr * ((100 - googlePct) / 100);
-  const searchBudget = usesGoogleUac ? 0 : googleBudget * (searchPct / googleSubSplitSum);
-  const displayBudget = usesGoogleUac ? 0 : googleBudget * (displayPct / googleSubSplitSum);
-  const youtubeBudget = usesGoogleUac ? 0 : googleBudget * (youtubePct / googleSubSplitSum);
+  const searchBudget = usesGoogleUac ? 0 : googleBudget * (effSearchPct / googleSubSplitSum);
+  const displayBudget = usesGoogleUac ? 0 : googleBudget * (effDisplayPct / googleSubSplitSum);
+  const youtubeBudget = usesGoogleUac ? 0 : googleBudget * (effYoutubePct / googleSubSplitSum);
   const uacBudget = usesGoogleUac ? googleBudget : 0;
-  const facebookBudget = metaBudget * (facebookPct / 100);
-  const instagramBudget = metaBudget * ((100 - facebookPct) / 100);
+  const facebookBudget = metaBudget * (effFacebookPct / metaSubSplitSum);
+  const instagramBudget = metaBudget * (effInstagramPct / metaSubSplitSum);
 
   const channelSpend: Record<ChannelId, number> = useMemo(
     () => ({
@@ -256,6 +293,24 @@ export default function GrowthSimulator() {
     }),
     [searchBudget, displayBudget, youtubeBudget, uacBudget, facebookBudget, instagramBudget, organic]
   );
+
+  // Impressions = clicks ÷ CTR, purely derived from your own CPC/CTR
+  // inputs — NOT sized from the audience reach estimate below. Shown next
+  // to reach so the two can be sanity-checked against each other instead
+  // of silently disagreeing (see AudienceCard's frequency note).
+  const totalMonthlyImpressions = useMemo(() => {
+    let total = 0;
+    for (const channel of visibleChannels) {
+      if (channel.isOrganic) continue;
+      const spend = channelSpend[channel.id] ?? 0;
+      const cpc = channelCpc[channel.id]?.value ?? 0;
+      const ctr = channelCtr[channel.id]?.value ?? 0;
+      if (spend > 0 && cpc > 0 && ctr > 0) {
+        total += spend / cpc / (ctr / 100);
+      }
+    }
+    return total;
+  }, [visibleChannels, channelSpend, channelCpc, channelCtr]);
 
   const allForecasts = useMemo(() => {
     const map: Partial<Record<ChannelId, Record<ScenarioName, ChannelForecast>>> = {};
@@ -345,10 +400,11 @@ export default function GrowthSimulator() {
     () =>
       rankChannelEfficiency(
         visibleChannels
-          .filter((c) => baseForecasts[c.id])
+          .filter((c) => baseForecasts[c.id] && (c.isOrganic || isChannelEnabled(c.id)))
           .map((c) => ({ channelId: c.id, isOrganic: c.isOrganic, forecast: baseForecasts[c.id]! }))
       ),
-    [visibleChannels, baseForecasts]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visibleChannels, baseForecasts, channelEnabled]
   );
 
   const benchmarkRows: BenchmarkRow[] = template.stages.map((stage) => ({
@@ -364,7 +420,7 @@ export default function GrowthSimulator() {
       return { label: b.label, source: b.source, tier: b.tier, sourceUrl: b.sourceUrl };
     }),
     ...visibleChannels
-      .filter((c) => !c.isOrganic)
+      .filter((c) => !c.isOrganic && isChannelEnabled(c.id))
       .map((c) => {
         const b = getChannelBenchmark(industry.group, c.id);
         return { label: `${c.label} CPC/CTR`, source: b.source, tier: b.tier };
@@ -409,7 +465,7 @@ export default function GrowthSimulator() {
         valueLabel={template.valueLabel}
       />
 
-      <AudienceCard persona={audience} onChange={setAudience} />
+      <AudienceCard persona={audience} onChange={setAudience} monthlyImpressions={totalMonthlyImpressions} />
 
       <div className="flex gap-1 border-b border-line">
         {visibleTabs.map((tab) => (
@@ -461,40 +517,70 @@ export default function GrowthSimulator() {
             <>
               <div className="rounded-lg border border-line bg-surface p-4">
                 <span className="text-xs text-foreground/60">
-                  Split of the {formatInrCompact(googleBudget)}/month Google budget
+                  Split of the {formatInrCompact(googleBudget)}/month Google budget — turn off any channel you
+                  don&apos;t want to run; its share goes to the ones still on.
                 </span>
                 <div className="mt-2 grid grid-cols-3 gap-3">
-                  <SubSplitField label="Search" value={searchPct} onChange={setSearchPct} budget={searchBudget} />
-                  <SubSplitField label="Display" value={displayPct} onChange={setDisplayPct} budget={displayBudget} />
-                  <SubSplitField label="YouTube" value={youtubePct} onChange={setYoutubePct} budget={youtubeBudget} />
+                  <SubSplitField
+                    label="Search"
+                    value={searchPct}
+                    onChange={setSearchPct}
+                    budget={searchBudget}
+                    enabled={isChannelEnabled("google-search")}
+                    onToggleEnabled={() => toggleChannelEnabled("google-search")}
+                  />
+                  <SubSplitField
+                    label="Display"
+                    value={displayPct}
+                    onChange={setDisplayPct}
+                    budget={displayBudget}
+                    enabled={isChannelEnabled("google-display")}
+                    onToggleEnabled={() => toggleChannelEnabled("google-display")}
+                  />
+                  <SubSplitField
+                    label="YouTube"
+                    value={youtubePct}
+                    onChange={setYoutubePct}
+                    budget={youtubeBudget}
+                    enabled={isChannelEnabled("youtube")}
+                    onToggleEnabled={() => toggleChannelEnabled("youtube")}
+                  />
                 </div>
               </div>
-              {(["google-search", "google-display", "youtube"] as ChannelId[]).map((channelId) => (
-                <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
-                  <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
-                  <div className="mt-3">
-                    <ChannelPanel
-                      channelId={channelId}
-                      label={getChannel(channelId).label}
-                      group={industry.group}
-                      spendInr={channelSpend[channelId]}
-                      cpcValue={channelCpc[channelId].value}
-                      cpcValueClass={channelCpc[channelId].valueClass}
-                      onCpcChange={(v) => setCpcValue(channelId, v)}
-                      ctrValue={channelCtr[channelId].value}
-                      ctrValueClass={channelCtr[channelId].valueClass}
-                      onCtrChange={(v) => setCtrValue(channelId, v)}
-                      template={template}
-                      stageAssumptions={stageAssumptionsPlain}
-                      onStageRateChange={setStageValue}
-                      targetCacInr={targetCacInr}
-                      revenuePerCustomerInr={economics.revenuePerCustomerInr}
-                      variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
-                      contributionMarginPct={economics.contributionMarginPct}
-                    />
+              {(["google-search", "google-display", "youtube"] as ChannelId[]).map((channelId) =>
+                isChannelEnabled(channelId) ? (
+                  <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
+                    <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
+                    <div className="mt-3">
+                      <ChannelPanel
+                        channelId={channelId}
+                        label={getChannel(channelId).label}
+                        group={industry.group}
+                        spendInr={channelSpend[channelId]}
+                        cpcValue={channelCpc[channelId].value}
+                        cpcValueClass={channelCpc[channelId].valueClass}
+                        onCpcChange={(v) => setCpcValue(channelId, v)}
+                        ctrValue={channelCtr[channelId].value}
+                        ctrValueClass={channelCtr[channelId].valueClass}
+                        onCtrChange={(v) => setCtrValue(channelId, v)}
+                        template={template}
+                        stageAssumptions={stageAssumptionsPlain}
+                        onStageRateChange={setStageValue}
+                        targetCacInr={targetCacInr}
+                        revenuePerCustomerInr={economics.revenuePerCustomerInr}
+                        variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
+                        contributionMarginPct={economics.contributionMarginPct}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <DisabledChannelNote
+                    key={channelId}
+                    label={getChannel(channelId).label}
+                    onEnable={() => toggleChannelEnabled(channelId)}
+                  />
+                )
+              )}
             </>
           )}
         </div>
@@ -504,44 +590,62 @@ export default function GrowthSimulator() {
         <div className="flex flex-col gap-6">
           <div className="rounded-lg border border-line bg-surface p-4">
             <span className="text-xs text-foreground/60">
-              Split of the {formatInrCompact(metaBudget)}/month Meta budget
+              Split of the {formatInrCompact(metaBudget)}/month Meta budget — turn off any channel you don&apos;t
+              want to run; its share goes to the ones still on.
             </span>
             <div className="mt-2 grid grid-cols-2 gap-3">
-              <SubSplitField label="Facebook" value={facebookPct} onChange={setFacebookPct} budget={facebookBudget} />
+              <SubSplitField
+                label="Facebook"
+                value={facebookPct}
+                onChange={setFacebookPct}
+                budget={facebookBudget}
+                enabled={isChannelEnabled("facebook")}
+                onToggleEnabled={() => toggleChannelEnabled("facebook")}
+              />
               <SubSplitField
                 label="Instagram"
                 value={100 - facebookPct}
                 onChange={(v) => setFacebookPct(100 - v)}
                 budget={instagramBudget}
+                enabled={isChannelEnabled("instagram")}
+                onToggleEnabled={() => toggleChannelEnabled("instagram")}
               />
             </div>
           </div>
-          {(["facebook", "instagram"] as ChannelId[]).map((channelId) => (
-            <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
-              <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
-              <div className="mt-3">
-                <ChannelPanel
-                  channelId={channelId}
-                  label={getChannel(channelId).label}
-                  group={industry.group}
-                  spendInr={channelSpend[channelId]}
-                  cpcValue={channelCpc[channelId].value}
-                  cpcValueClass={channelCpc[channelId].valueClass}
-                  onCpcChange={(v) => setCpcValue(channelId, v)}
-                  ctrValue={channelCtr[channelId].value}
-                  ctrValueClass={channelCtr[channelId].valueClass}
-                  onCtrChange={(v) => setCtrValue(channelId, v)}
-                  template={template}
-                  stageAssumptions={stageAssumptionsPlain}
-                  onStageRateChange={setStageValue}
-                  targetCacInr={targetCacInr}
-                  revenuePerCustomerInr={economics.revenuePerCustomerInr}
-                  variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
-                  contributionMarginPct={economics.contributionMarginPct}
-                />
+          {(["facebook", "instagram"] as ChannelId[]).map((channelId) =>
+            isChannelEnabled(channelId) ? (
+              <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
+                <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
+                <div className="mt-3">
+                  <ChannelPanel
+                    channelId={channelId}
+                    label={getChannel(channelId).label}
+                    group={industry.group}
+                    spendInr={channelSpend[channelId]}
+                    cpcValue={channelCpc[channelId].value}
+                    cpcValueClass={channelCpc[channelId].valueClass}
+                    onCpcChange={(v) => setCpcValue(channelId, v)}
+                    ctrValue={channelCtr[channelId].value}
+                    ctrValueClass={channelCtr[channelId].valueClass}
+                    onCtrChange={(v) => setCtrValue(channelId, v)}
+                    template={template}
+                    stageAssumptions={stageAssumptionsPlain}
+                    onStageRateChange={setStageValue}
+                    targetCacInr={targetCacInr}
+                    revenuePerCustomerInr={economics.revenuePerCustomerInr}
+                    variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
+                    contributionMarginPct={economics.contributionMarginPct}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ) : (
+              <DisabledChannelNote
+                key={channelId}
+                label={getChannel(channelId).label}
+                onEnable={() => toggleChannelEnabled(channelId)}
+              />
+            )
+          )}
         </div>
       )}
 
@@ -624,24 +728,56 @@ function SubSplitField({
   value,
   onChange,
   budget,
+  enabled = true,
+  onToggleEnabled,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   budget: number;
+  enabled?: boolean;
+  onToggleEnabled?: () => void;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-xs text-foreground/60">
-        {label} ({value}%)
+    <label className={`flex flex-col gap-1 text-sm ${enabled ? "" : "opacity-50"}`}>
+      <span className="flex items-center justify-between text-xs text-foreground/60">
+        <span>
+          {label} ({value}%)
+        </span>
+        {onToggleEnabled && (
+          <button
+            type="button"
+            onClick={onToggleEnabled}
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              enabled ? "bg-brand/10 text-brand-dark" : "bg-neutral-200 text-foreground/50"
+            }`}
+          >
+            {enabled ? "On" : "Off"}
+          </button>
+        )}
       </span>
       <input
         type="number"
         value={value}
+        disabled={!enabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="rounded border border-line bg-background px-2 py-1 tabular-nums"
+        className="rounded border border-line bg-background px-2 py-1 tabular-nums disabled:cursor-not-allowed"
       />
-      <span className="text-xs text-foreground/50">{formatInrCompact(budget)}/month</span>
+      <span className="text-xs text-foreground/50">
+        {enabled ? `${formatInrCompact(budget)}/month` : "Not running — budget redistributed"}
+      </span>
     </label>
+  );
+}
+
+/** Compact stand-in for a channel's full panel when it's switched off. */
+function DisabledChannelNote({ label, onEnable }: { label: string; onEnable: () => void }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-dashed border-line bg-surface/50 px-4 py-3 text-sm text-foreground/50">
+      <span>{label} is turned off — no budget allocated, not counted in this plan.</span>
+      <button type="button" onClick={onEnable} className="font-semibold text-brand hover:underline">
+        Turn back on
+      </button>
+    </div>
   );
 }
