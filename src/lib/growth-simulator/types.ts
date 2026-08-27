@@ -155,9 +155,10 @@ export type ChannelId =
   | "google-uac"
   | "facebook"
   | "instagram"
+  | "linkedin"
   | "seo"
   | "aso";
-export type ChannelTabId = "google" | "meta" | "seo" | "aso";
+export type ChannelTabId = "google" | "meta" | "linkedin" | "seo" | "aso";
 
 export interface ChannelMeta {
   id: ChannelId;
@@ -236,4 +237,41 @@ export interface ConstraintAssessment {
   benchmarkMedian: number;
   gapPct: number; // negative = below benchmark (worse), positive = above
   isBottleneck: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign objectives — what a channel's budget is actually being bought
+// against. Not every YouTube/Meta/LinkedIn campaign is a lead-gen funnel:
+// a platform sells Views, Follower/Engagement growth, and Message-start
+// campaigns as their own bid objectives, each with its own cost unit and
+// no natural place in a click -> lead -> customer funnel. See objectives.ts.
+// ---------------------------------------------------------------------------
+
+export type ChannelObjectiveId = "leads" | "traffic" | "views" | "engagement" | "messages" | "awareness";
+
+export interface ChannelObjectiveDefinition {
+  id: ChannelObjectiveId;
+  label: string;
+  /** Singular/plural-agnostic name of the unit this objective buys, e.g. "view", "follower". */
+  unitLabel: string;
+  description: string;
+  /**
+   * true = this objective's clicks flow into the shared conversion funnel
+   * (same treatment as Google Search today) and count toward CAC/revenue.
+   * false = a single spend -> cost-per-unit -> volume calculation with no
+   * funnel and no revenue attribution — a view or a follow isn't a lead.
+   */
+  feedsFunnel: boolean;
+}
+
+/** Cost-per-unit benchmark for a non-funnel objective (views, follows, messages, ...). */
+export interface UnitCostBenchmark {
+  costPerUnit: number; // ₹
+  costPerUnitP25: number;
+  costPerUnitP75: number;
+  unitLabel: string;
+  source: string;
+  tier: BenchmarkTier;
+  confidenceScore: number;
+  notes?: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ChannelId, ChannelTabId, GoalId, IndustryId, Platform, ValueClass } from "@/lib/growth-simulator/types";
+import type { ChannelId, ChannelObjectiveId, ChannelTabId, GoalId, IndustryId, Platform, ValueClass } from "@/lib/growth-simulator/types";
 import {
   INDUSTRIES,
   channelsForGoal,
@@ -12,6 +12,7 @@ import {
   resolveFunnelTemplate,
 } from "@/lib/growth-simulator/catalog";
 import { getChannelBenchmark, getFunnelBenchmark } from "@/lib/growth-simulator/benchmarks";
+import { getChannelObjectives, getUnitBenchmark } from "@/lib/growth-simulator/objectives";
 import { defaultEconomics, type EconomicsDefaults } from "@/lib/growth-simulator/defaults";
 import {
   assessConstraints,
@@ -30,10 +31,22 @@ import type { BenchmarkRow } from "./BenchmarkTable";
 import BusinessSetupPanel, { type PlanMode } from "./BusinessSetupPanel";
 import AudienceCard from "./AudienceCard";
 import ChannelPanel from "./ChannelPanel";
+import ObjectiveChannelPanel from "./ObjectiveChannelPanel";
 import OrganicChannelPanel from "./OrganicChannelPanel";
 import SummaryPanel from "./SummaryPanel";
 
-const PAID_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display", "youtube", "google-uac", "facebook", "instagram"];
+const PAID_CHANNEL_IDS: ChannelId[] = [
+  "google-search",
+  "google-display",
+  "youtube",
+  "google-uac",
+  "facebook",
+  "instagram",
+  "linkedin",
+];
+
+/** Channels where a non-"leads" objective (Views, Traffic, Engagement, Messages, Awareness) is even offered. */
+const OBJECTIVE_CAPABLE_CHANNEL_IDS = new Set<ChannelId>(["youtube", "facebook", "instagram", "linkedin"]);
 
 function initialCpcMap(
   group: "finance" | "app",
@@ -72,6 +85,7 @@ interface OrganicState {
 const TAB_LABEL: Record<ChannelTabId | "summary", string> = {
   google: "Google",
   meta: "Meta",
+  linkedin: "LinkedIn",
   seo: "SEO",
   aso: "ASO",
   summary: "Summary",
@@ -101,6 +115,20 @@ export default function GrowthSimulator() {
   // as a deliberate split — Google App Campaigns (UAC) is already a single
   // auto-placed channel with nothing to split.
   const [channelEnabled, setChannelEnabled] = useState<Partial<Record<ChannelId, boolean>>>({});
+  // LinkedIn's slice of TOTAL monthly budget, taken off the top; Google and
+  // Meta then split whatever's left via googlePct as before. Defaults to 0
+  // so existing plans are unaffected until a user deliberately allocates to
+  // LinkedIn — it's a new, opt-in channel, not a silent budget cut.
+  const [linkedinPct, setLinkedinPct] = useState(0);
+  // What each objective-capable channel (YouTube/Facebook/Instagram/
+  // LinkedIn) is actually bought against — see objectives.ts. Missing from
+  // the map = "leads", i.e. the original funnel-driving behaviour.
+  const [channelObjective, setChannelObjective] = useState<Partial<Record<ChannelId, ChannelObjectiveId>>>({});
+  // Editable cost-per-unit for a channel's non-"leads" objective (₹ per
+  // view/click/follow/message/impression) — missing = use that objective's
+  // benchmark. Only one objective is active per channel at a time, so one
+  // value per channel id is enough.
+  const [objectiveUnitCost, setObjectiveUnitCost] = useState<Partial<Record<ChannelId, number>>>({});
   const [activeTab, setActiveTab] = useState<ChannelTabId | "summary">("google");
 
   function isChannelEnabled(id: ChannelId): boolean {
@@ -109,6 +137,36 @@ export default function GrowthSimulator() {
 
   function toggleChannelEnabled(id: ChannelId) {
     setChannelEnabled((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  }
+
+  function getChannelObjectiveId(id: ChannelId): ChannelObjectiveId {
+    return channelObjective[id] ?? "leads";
+  }
+
+  function setChannelObjectiveId(id: ChannelId, objectiveId: ChannelObjectiveId) {
+    setChannelObjective((prev) => ({ ...prev, [id]: objectiveId }));
+    // Reset the unit-cost override so switching objectives shows that
+    // objective's own benchmark rather than a stale value left over from
+    // whatever was previously selected.
+    setObjectiveUnitCost((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  /** Only a "leads" objective (or a channel with no objective choice at all) drives the shared funnel/CAC math. */
+  function channelFeedsFunnel(id: ChannelId): boolean {
+    return !OBJECTIVE_CAPABLE_CHANNEL_IDS.has(id) || getChannelObjectiveId(id) === "leads";
+  }
+
+  function getObjectiveUnitCostValue(id: ChannelId): number {
+    if (objectiveUnitCost[id] != null) return objectiveUnitCost[id]!;
+    return getUnitBenchmark(id, getChannelObjectiveId(id))?.costPerUnit ?? 0;
+  }
+
+  function setObjectiveUnitCostVal(id: ChannelId, value: number) {
+    setObjectiveUnitCost((prev) => ({ ...prev, [id]: value }));
   }
 
   const initialTemplate = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
@@ -214,33 +272,56 @@ export default function GrowthSimulator() {
   const effFacebookPct = isChannelEnabled("facebook") ? facebookPct : 0;
   const effInstagramPct = isChannelEnabled("instagram") ? 100 - facebookPct : 0;
   const metaSubSplitSum = effFacebookPct + effInstagramPct || 1;
+  // LinkedIn takes its slice off the top of the TOTAL budget; Google and
+  // Meta then split whatever's left, via the same googlePct as before.
+  const nonLinkedinPoolPct = 100 - linkedinPct;
+  // A channel still gets its real budget share regardless of objective —
+  // switching YouTube to "Views" doesn't cut its spend, it just changes
+  // what that spend is optimizing for. Only the funnel-feeding weight used
+  // for goal-first back-solving (channelWeights below) should exclude a
+  // non-"leads" objective, since a view or a follow isn't a lead to solve
+  // a budget against.
+  const effYoutubeFunnelPct = channelFeedsFunnel("youtube") ? effYoutubePct : 0;
+  const youtubeGoogleSubSplitSum = effSearchPct + effDisplayPct + effYoutubeFunnelPct || 1;
+  const effFacebookFunnelPct = channelFeedsFunnel("facebook") ? effFacebookPct : 0;
+  const effInstagramFunnelPct = channelFeedsFunnel("instagram") ? effInstagramPct : 0;
+  const metaFunnelSubSplitSum = effFacebookFunnelPct + effInstagramFunnelPct || 1;
 
   const channelWeights: PaidChannelWeight[] = [
     {
       channelId: "google-search",
       cpc: channelCpc["google-search"].value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (effSearchPct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : nonLinkedinPoolPct * googlePct * (effSearchPct / youtubeGoogleSubSplitSum),
     },
     {
       channelId: "google-display",
       cpc: channelCpc["google-display"].value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (effDisplayPct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : nonLinkedinPoolPct * googlePct * (effDisplayPct / youtubeGoogleSubSplitSum),
     },
     {
       channelId: "youtube",
       cpc: channelCpc.youtube.value,
-      sharePct: usesGoogleUac ? 0 : googlePct * (effYoutubePct / googleSubSplitSum),
+      sharePct: usesGoogleUac ? 0 : nonLinkedinPoolPct * googlePct * (effYoutubeFunnelPct / youtubeGoogleSubSplitSum),
     },
-    { channelId: "google-uac", cpc: channelCpc["google-uac"].value, sharePct: usesGoogleUac ? googlePct : 0 },
+    {
+      channelId: "google-uac",
+      cpc: channelCpc["google-uac"].value,
+      sharePct: usesGoogleUac ? nonLinkedinPoolPct * googlePct : 0,
+    },
     {
       channelId: "facebook",
       cpc: channelCpc.facebook.value,
-      sharePct: (100 - googlePct) * (effFacebookPct / metaSubSplitSum),
+      sharePct: nonLinkedinPoolPct * (100 - googlePct) * (effFacebookFunnelPct / metaFunnelSubSplitSum),
     },
     {
       channelId: "instagram",
       cpc: channelCpc.instagram.value,
-      sharePct: (100 - googlePct) * (effInstagramPct / metaSubSplitSum),
+      sharePct: nonLinkedinPoolPct * (100 - googlePct) * (effInstagramFunnelPct / metaFunnelSubSplitSum),
+    },
+    {
+      channelId: "linkedin",
+      cpc: channelCpc.linkedin.value,
+      sharePct: channelFeedsFunnel("linkedin") ? linkedinPct * 100 : 0,
     },
   ];
 
@@ -265,14 +346,18 @@ export default function GrowthSimulator() {
       facebookPct,
       usesGoogleUac,
       channelEnabled,
+      linkedinPct,
+      channelObjective,
     ]
   );
 
   const monthlyBudgetInr =
     planMode === "goal" ? requiredBudgetInr : cadence === "daily" ? budgetInputValue * 30 : budgetInputValue;
 
-  const googleBudget = monthlyBudgetInr * (googlePct / 100);
-  const metaBudget = monthlyBudgetInr * ((100 - googlePct) / 100);
+  const linkedinBudget = monthlyBudgetInr * (linkedinPct / 100);
+  const googleMetaPoolInr = monthlyBudgetInr * (nonLinkedinPoolPct / 100);
+  const googleBudget = googleMetaPoolInr * (googlePct / 100);
+  const metaBudget = googleMetaPoolInr * ((100 - googlePct) / 100);
   const searchBudget = usesGoogleUac ? 0 : googleBudget * (effSearchPct / googleSubSplitSum);
   const displayBudget = usesGoogleUac ? 0 : googleBudget * (effDisplayPct / googleSubSplitSum);
   const youtubeBudget = usesGoogleUac ? 0 : googleBudget * (effYoutubePct / googleSubSplitSum);
@@ -288,10 +373,11 @@ export default function GrowthSimulator() {
       "google-uac": uacBudget,
       facebook: facebookBudget,
       instagram: instagramBudget,
+      linkedin: linkedinBudget,
       seo: organic.seo.investmentInr,
       aso: organic.aso.investmentInr,
     }),
-    [searchBudget, displayBudget, youtubeBudget, uacBudget, facebookBudget, instagramBudget, organic]
+    [searchBudget, displayBudget, youtubeBudget, uacBudget, facebookBudget, instagramBudget, linkedinBudget, organic]
   );
 
   // Impressions = clicks ÷ CTR, purely derived from your own CPC/CTR
@@ -315,6 +401,11 @@ export default function GrowthSimulator() {
   const allForecasts = useMemo(() => {
     const map: Partial<Record<ChannelId, Record<ScenarioName, ChannelForecast>>> = {};
     for (const channel of visibleChannels) {
+      // A channel bought against Views/Traffic/Engagement/Messages/Awareness
+      // doesn't produce a "lead" — it has no place in the shared funnel, CAC,
+      // or revenue math. Its own volume is computed separately in its panel
+      // (ObjectiveChannelPanel) from a simple spend ÷ cost-per-unit.
+      if (!channel.isOrganic && !channelFeedsFunnel(channel.id)) continue;
       if (channel.isOrganic) {
         const key = channel.id as "seo" | "aso";
         const state = organic[key];
@@ -343,7 +434,8 @@ export default function GrowthSimulator() {
       }
     }
     return map;
-  }, [visibleChannels, channelSpend, organic, channelCpc, template, stageAssumptionsPlain, economics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleChannels, channelSpend, organic, channelCpc, template, stageAssumptionsPlain, economics, channelObjective]);
 
   const baseForecasts = useMemo(() => {
     const map: Partial<Record<ChannelId, ChannelForecast>> = {};
@@ -376,6 +468,40 @@ export default function GrowthSimulator() {
       gei: spend > 0 ? contribution / spend : 0,
     };
   }, [visibleChannels, baseForecasts]);
+
+  // Every rupee actually allocated, including channels bought against a
+  // non-"leads" objective (Views/Traffic/Engagement/Messages/Awareness) —
+  // `totals.spend` above deliberately excludes those since they don't
+  // produce a lead, but the money was still spent and should still show up
+  // as invested.
+  const totalAllSpendInr = useMemo(
+    () => visibleChannels.reduce((sum, c) => sum + (channelSpend[c.id] ?? 0), 0),
+    [visibleChannels, channelSpend]
+  );
+
+  // Volume for channels bought against a non-funnel objective — kept
+  // entirely separate from Leads/CAC/Contribution above; see
+  // ObjectiveChannelPanel's explanation of why.
+  const objectiveResults = useMemo(
+    () =>
+      visibleChannels
+        .filter((c) => !c.isOrganic && OBJECTIVE_CAPABLE_CHANNEL_IDS.has(c.id) && !channelFeedsFunnel(c.id))
+        .map((c) => {
+          const objective = getChannelObjectives(c.id).find((o) => o.id === getChannelObjectiveId(c.id))!;
+          const spendInr = channelSpend[c.id] ?? 0;
+          const costPerUnit = getObjectiveUnitCostValue(c.id);
+          return {
+            channelId: c.id,
+            channelLabel: getChannel(c.id).label,
+            objectiveLabel: objective.label,
+            unitLabel: objective.unitLabel,
+            spendInr,
+            volume: spendInr > 0 && costPerUnit > 0 ? spendInr / costPerUnit : 0,
+          };
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visibleChannels, channelSpend, channelObjective, objectiveUnitCost]
+  );
 
   const scenarioConversionTotals = useMemo(() => {
     const result: Record<ScenarioName, number> = { conservative: 0, base: 0, upside: 0 };
@@ -420,12 +546,75 @@ export default function GrowthSimulator() {
       return { label: b.label, source: b.source, tier: b.tier, sourceUrl: b.sourceUrl };
     }),
     ...visibleChannels
-      .filter((c) => !c.isOrganic && isChannelEnabled(c.id))
+      .filter((c) => !c.isOrganic && isChannelEnabled(c.id) && channelFeedsFunnel(c.id))
       .map((c) => {
         const b = getChannelBenchmark(industry.group, c.id);
         return { label: `${c.label} CPC/CTR`, source: b.source, tier: b.tier };
       }),
+    ...objectiveResults
+      .map((r) => {
+        const b = getUnitBenchmark(r.channelId as ChannelId, getChannelObjectiveId(r.channelId as ChannelId));
+        return b ? { label: `${r.channelLabel} — ${r.objectiveLabel}`, source: b.source, tier: b.tier } : null;
+      })
+      .filter((s): s is { label: string; source: string; tier: 1 | 2 | 3 | 4 | 5 } => s != null),
   ];
+
+  /** Objective picker (for channels that offer one) + the funnel/non-funnel panel body, shared across Google/Meta/LinkedIn tabs. */
+  function renderChannelBody(channelId: ChannelId) {
+    const objectives = getChannelObjectives(channelId);
+    const currentObjectiveId = getChannelObjectiveId(channelId);
+    const objectiveDef = objectives.find((o) => o.id === currentObjectiveId);
+
+    return (
+      <>
+        {objectives.length > 0 && (
+          <label className="mb-3 flex max-w-sm flex-col gap-1 text-sm">
+            <span className="text-xs text-foreground/60">Campaign objective</span>
+            <select
+              value={currentObjectiveId}
+              onChange={(e) => setChannelObjectiveId(channelId, e.target.value as ChannelObjectiveId)}
+              className="rounded border border-line bg-background px-2 py-1.5"
+            >
+              {objectives.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {objectiveDef && objectiveDef.id !== "leads" ? (
+          <ObjectiveChannelPanel
+            channelId={channelId}
+            objective={objectiveDef}
+            spendInr={channelSpend[channelId]}
+            costPerUnit={getObjectiveUnitCostValue(channelId)}
+            onCostPerUnitChange={(v) => setObjectiveUnitCostVal(channelId, v)}
+          />
+        ) : (
+          <ChannelPanel
+            channelId={channelId}
+            label={getChannel(channelId).label}
+            group={industry.group}
+            spendInr={channelSpend[channelId]}
+            cpcValue={channelCpc[channelId].value}
+            cpcValueClass={channelCpc[channelId].valueClass}
+            onCpcChange={(v) => setCpcValue(channelId, v)}
+            ctrValue={channelCtr[channelId].value}
+            ctrValueClass={channelCtr[channelId].valueClass}
+            onCtrChange={(v) => setCtrValue(channelId, v)}
+            template={template}
+            stageAssumptions={stageAssumptionsPlain}
+            onStageRateChange={setStageValue}
+            targetCacInr={targetCacInr}
+            revenuePerCustomerInr={economics.revenuePerCustomerInr}
+            variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
+            contributionMarginPct={economics.contributionMarginPct}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -551,27 +740,7 @@ export default function GrowthSimulator() {
                 isChannelEnabled(channelId) ? (
                   <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
                     <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
-                    <div className="mt-3">
-                      <ChannelPanel
-                        channelId={channelId}
-                        label={getChannel(channelId).label}
-                        group={industry.group}
-                        spendInr={channelSpend[channelId]}
-                        cpcValue={channelCpc[channelId].value}
-                        cpcValueClass={channelCpc[channelId].valueClass}
-                        onCpcChange={(v) => setCpcValue(channelId, v)}
-                        ctrValue={channelCtr[channelId].value}
-                        ctrValueClass={channelCtr[channelId].valueClass}
-                        onCtrChange={(v) => setCtrValue(channelId, v)}
-                        template={template}
-                        stageAssumptions={stageAssumptionsPlain}
-                        onStageRateChange={setStageValue}
-                        targetCacInr={targetCacInr}
-                        revenuePerCustomerInr={economics.revenuePerCustomerInr}
-                        variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
-                        contributionMarginPct={economics.contributionMarginPct}
-                      />
-                    </div>
+                    <div className="mt-3">{renderChannelBody(channelId)}</div>
                   </div>
                 ) : (
                   <DisabledChannelNote
@@ -616,27 +785,7 @@ export default function GrowthSimulator() {
             isChannelEnabled(channelId) ? (
               <div key={channelId} className="border-t border-line pt-6 first:border-0 first:pt-0">
                 <h3 className="font-display text-base font-semibold text-foreground">{getChannel(channelId).label}</h3>
-                <div className="mt-3">
-                  <ChannelPanel
-                    channelId={channelId}
-                    label={getChannel(channelId).label}
-                    group={industry.group}
-                    spendInr={channelSpend[channelId]}
-                    cpcValue={channelCpc[channelId].value}
-                    cpcValueClass={channelCpc[channelId].valueClass}
-                    onCpcChange={(v) => setCpcValue(channelId, v)}
-                    ctrValue={channelCtr[channelId].value}
-                    ctrValueClass={channelCtr[channelId].valueClass}
-                    onCtrChange={(v) => setCtrValue(channelId, v)}
-                    template={template}
-                    stageAssumptions={stageAssumptionsPlain}
-                    onStageRateChange={setStageValue}
-                    targetCacInr={targetCacInr}
-                    revenuePerCustomerInr={economics.revenuePerCustomerInr}
-                    variableCostPerCustomerInr={economics.variableCostPerCustomerInr}
-                    contributionMarginPct={economics.contributionMarginPct}
-                  />
-                </div>
+                <div className="mt-3">{renderChannelBody(channelId)}</div>
               </div>
             ) : (
               <DisabledChannelNote
@@ -645,6 +794,43 @@ export default function GrowthSimulator() {
                 onEnable={() => toggleChannelEnabled(channelId)}
               />
             )
+          )}
+        </div>
+      )}
+
+      {activeTab === "linkedin" && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-lg border border-line bg-surface p-4">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs text-foreground/60">
+                LinkedIn share of TOTAL monthly budget — taken off the top; Google and Meta split whatever&apos;s
+                left, unchanged.
+              </span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={60}
+                  value={linkedinPct}
+                  onChange={(e) => setLinkedinPct(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="w-32 shrink-0 text-right text-sm font-semibold tabular-nums text-foreground">
+                  {linkedinPct}% · {formatInrCompact(linkedinBudget)}/month
+                </span>
+              </div>
+            </label>
+            <p className="mt-2 text-xs text-foreground/50">
+              LinkedIn CPC typically runs 5–15× Google/Meta&apos;s in India (₹150–650 vs. single/double digits) —
+              only worth allocating here when your product sells to companies/professionals, not consumers.
+            </p>
+          </div>
+          {linkedinPct === 0 ? (
+            <div className="rounded-lg border border-dashed border-line bg-surface/50 px-4 py-6 text-center text-sm text-foreground/50">
+              No budget allocated to LinkedIn yet — move the slider above to plan a LinkedIn campaign.
+            </div>
+          ) : (
+            renderChannelBody("linkedin")
           )}
         </div>
       )}
@@ -695,7 +881,7 @@ export default function GrowthSimulator() {
 
       {activeTab === "summary" && (
         <SummaryPanel
-          totalSpendInr={totals.spend}
+          totalSpendInr={totalAllSpendInr}
           totalConversions={totals.conversions}
           blendedCacInr={totals.cac}
           totalRevenueInr={totals.revenue}
@@ -711,6 +897,7 @@ export default function GrowthSimulator() {
           sources={sources}
           mediaSplit={mediaSplit}
           scenarioConversionTotals={scenarioConversionTotals}
+          objectiveResults={objectiveResults}
         />
       )}
 

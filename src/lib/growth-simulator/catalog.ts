@@ -417,6 +417,7 @@ export const CHANNELS: ChannelMeta[] = [
   { id: "google-uac", label: "Google App Campaigns (UAC)", tab: "google", isOrganic: false },
   { id: "facebook", label: "Facebook", tab: "meta", isOrganic: false },
   { id: "instagram", label: "Instagram", tab: "meta", isOrganic: false },
+  { id: "linkedin", label: "LinkedIn", tab: "linkedin", isOrganic: false },
   { id: "seo", label: "SEO", tab: "seo", isOrganic: true },
   { id: "aso", label: "ASO (App Store Optimization)", tab: "aso", isOrganic: true, appOnly: true },
 ];
@@ -435,6 +436,10 @@ const GOOGLE_SPLIT_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display"
  * - Google shows either the Search/Display/YouTube split (website-style
  *   buying) OR the single App Campaigns channel (app-style buying),
  *   never both — see isGoogleUacGoal().
+ * - LinkedIn is modelled as a website-style channel (its own CPC/CTR into
+ *   the shared funnel, like Search) — it isn't sold as an app-install
+ *   campaign in this tool, so it follows the same website-vs-UAC gate as
+ *   the Google split.
  */
 export function channelsForGoal(goalId: string): ChannelMeta[] {
   const uac = isGoogleUacGoal(goalId);
@@ -442,6 +447,7 @@ export function channelsForGoal(goalId: string): ChannelMeta[] {
     if (c.appOnly && !APP_ACQUISITION_GOAL_IDS.has(goalId)) return false;
     if (c.id === "google-uac" && !uac) return false;
     if (GOOGLE_SPLIT_CHANNEL_IDS.includes(c.id) && uac) return false;
+    if (c.id === "linkedin" && uac) return false;
     return true;
   });
 }

@@ -9,6 +9,15 @@ import MediaSplitBar, { type MediaSplitSlice } from "./MediaSplitBar";
 import ScenarioBarChart from "./ScenarioBarChart";
 import InfoTooltip from "./InfoTooltip";
 
+export interface ObjectiveResult {
+  channelId: string;
+  channelLabel: string;
+  objectiveLabel: string;
+  unitLabel: string;
+  spendInr: number;
+  volume: number;
+}
+
 interface Props {
   totalSpendInr: number;
   totalConversions: number;
@@ -26,6 +35,7 @@ interface Props {
   sources: SourceEntry[];
   mediaSplit: MediaSplitSlice[];
   scenarioConversionTotals: Record<ScenarioName, number>;
+  objectiveResults: ObjectiveResult[];
 }
 
 /** PRD §24 CXO dashboard — the roll-up across every channel tab. */
@@ -46,6 +56,7 @@ export default function SummaryPanel({
   sources,
   mediaSplit,
   scenarioConversionTotals,
+  objectiveResults,
 }: Props) {
   const cacOverTarget = targetCacInr != null && blendedCacInr > targetCacInr;
 
@@ -80,6 +91,40 @@ export default function SummaryPanel({
         <MediaSplitBar slices={mediaSplit} />
         <ScenarioBarChart values={scenarioConversionTotals} valueLabel={valueLabel} />
       </section>
+
+      {objectiveResults.length > 0 && (
+        <section>
+          <h2 className="font-display text-lg font-semibold text-foreground">Awareness &amp; Engagement</h2>
+          <p className="mt-1 text-sm text-foreground/60">
+            Channels bought against a non-lead objective — counted in Total Investment above, but not in{" "}
+            {valueLabel}, Blended CAC, or Contribution. A view, a follow, or a message isn&apos;t a lead.
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-line">
+            <table className="w-full min-w-[480px] text-left text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wide text-foreground/50">
+                <tr>
+                  <th className="px-4 py-2">Channel</th>
+                  <th className="px-4 py-2">Objective</th>
+                  <th className="px-4 py-2 text-right">Spend</th>
+                  <th className="px-4 py-2 text-right">Volume</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {objectiveResults.map((r) => (
+                  <tr key={r.channelId}>
+                    <td className="px-4 py-2.5 font-medium text-foreground">{r.channelLabel}</td>
+                    <td className="px-4 py-2.5 text-foreground/70">{r.objectiveLabel}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">{formatInrCompact(r.spendInr)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">
+                      {formatNumber(r.volume)} {r.unitLabel}s
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="font-display text-lg font-semibold text-foreground">Benchmark position</h2>
