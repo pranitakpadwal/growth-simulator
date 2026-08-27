@@ -73,7 +73,8 @@ export type IndustryId =
   | "news"
   | "social"
   | "business"
-  | "travel";
+  | "travel"
+  | "events";
 
 /**
  * Content-vertical proxy for channel CPC/CTR selection (finance keywords

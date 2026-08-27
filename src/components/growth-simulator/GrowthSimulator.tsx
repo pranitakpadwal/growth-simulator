@@ -24,6 +24,7 @@ import {
 } from "@/lib/growth-simulator/engine";
 import type { ChannelForecast, BudgetCadence, ScenarioName } from "@/lib/growth-simulator/types";
 import { getAudiencePersona, type AudiencePersona } from "@/lib/growth-simulator/audience";
+import { AUDIENCE_STRATEGIES, type AudienceStrategyId } from "@/lib/growth-simulator/audienceStrategy";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
 import type { BenchmarkRow } from "./BenchmarkTable";
 import BusinessSetupPanel, { type PlanMode } from "./BusinessSetupPanel";
@@ -34,10 +35,13 @@ import SummaryPanel from "./SummaryPanel";
 
 const PAID_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display", "youtube", "google-uac", "facebook", "instagram"];
 
-function initialCpcMap(group: "finance" | "app"): Record<ChannelId, { value: number; valueClass: ValueClass }> {
+function initialCpcMap(
+  group: "finance" | "app",
+  cpcMult: number = 1
+): Record<ChannelId, { value: number; valueClass: ValueClass }> {
   const map = {} as Record<ChannelId, { value: number; valueClass: ValueClass }>;
   for (const id of PAID_CHANNEL_IDS) {
-    map[id] = { value: getChannelBenchmark(group, id).cpc, valueClass: "benchmark" };
+    map[id] = { value: getChannelBenchmark(group, id).cpc * cpcMult, valueClass: "benchmark" };
   }
   return map;
 }
@@ -76,6 +80,7 @@ const TAB_LABEL: Record<ChannelTabId | "summary", string> = {
 export default function GrowthSimulator() {
   const [industryId, setIndustryId] = useState<IndustryId>("personal-loans");
   const [platform, setPlatform] = useState<Platform>(getIndustry("personal-loans").defaultPlatform);
+  const [audienceStrategy, setAudienceStrategy] = useState<AudienceStrategyId>("cold");
   const [goalId, setGoalId] = useState<GoalId>(
     goalsForPlatform(getIndustry("personal-loans"), getIndustry("personal-loans").defaultPlatform)[0].id
   );
@@ -124,7 +129,7 @@ export default function GrowthSimulator() {
     setGoalId(nextGoalId);
     setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
     setAudience(getAudiencePersona(nextIndustry.id));
-    setChannelCpc(initialCpcMap(nextIndustry.group));
+    setChannelCpc(initialCpcMap(nextIndustry.group, AUDIENCE_STRATEGIES[audienceStrategy].cpcMult));
     setChannelCtr(initialCtrMap(nextIndustry.group));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
@@ -138,6 +143,11 @@ export default function GrowthSimulator() {
     setEconomics(defaultEconomics(industryId, nextGoalId));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
+  }
+
+  function handleAudienceStrategyChange(next: AudienceStrategyId) {
+    setAudienceStrategy(next);
+    setChannelCpc(initialCpcMap(industry.group, AUDIENCE_STRATEGIES[next].cpcMult));
   }
 
   function handleGoalChange(id: string) {
@@ -369,6 +379,8 @@ export default function GrowthSimulator() {
         onIndustryChange={handleIndustryChange}
         platform={platform}
         onPlatformChange={handlePlatformChange}
+        audienceStrategy={audienceStrategy}
+        onAudienceStrategyChange={handleAudienceStrategyChange}
         availableGoals={availableGoals}
         goalId={goalId}
         onGoalChange={handleGoalChange}

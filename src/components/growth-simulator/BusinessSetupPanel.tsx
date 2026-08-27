@@ -2,6 +2,7 @@
 
 import type { BudgetCadence, GoalDefinition, IndustryDefinition, Platform } from "@/lib/growth-simulator/types";
 import { formatInrCompact } from "@/lib/growth-simulator/format";
+import { AUDIENCE_STRATEGY_LIST, type AudienceStrategyId } from "@/lib/growth-simulator/audienceStrategy";
 import InfoTooltip from "./InfoTooltip";
 
 export type PlanMode = "budget" | "goal";
@@ -13,6 +14,9 @@ interface Props {
 
   platform: Platform;
   onPlatformChange: (p: Platform) => void;
+
+  audienceStrategy: AudienceStrategyId;
+  onAudienceStrategyChange: (s: AudienceStrategyId) => void;
 
   availableGoals: GoalDefinition[];
   goalId: string;
@@ -64,6 +68,8 @@ export default function BusinessSetupPanel({
   onIndustryChange,
   platform,
   onPlatformChange,
+  audienceStrategy,
+  onAudienceStrategyChange,
   availableGoals,
   goalId,
   onGoalChange,
@@ -237,6 +243,27 @@ export default function BusinessSetupPanel({
           />
           <span className="text-xs text-foreground/50">
             Max ₹ willing to pay per {valueLabel.toLowerCase().replace(/s$/, "")}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="flex items-center text-xs text-foreground/60">
+            Audience strategy
+            <InfoTooltip definition="Who you're pointing paid media at, not what they see. Retargeting (your own customer list) and lookalike (modelled on that list) audiences reliably cost less to reach than cold prospecting — this adjusts every paid channel's CPC accordingly. It doesn't touch conversion rates; those stay under your control in the funnel." />
+          </span>
+          <select
+            value={audienceStrategy}
+            onChange={(e) => onAudienceStrategyChange(e.target.value as AudienceStrategyId)}
+            className="rounded border border-line bg-background px-2 py-1.5"
+          >
+            {AUDIENCE_STRATEGY_LIST.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-foreground/50">
+            {AUDIENCE_STRATEGY_LIST.find((s) => s.id === audienceStrategy)?.description}
           </span>
         </label>
       </div>

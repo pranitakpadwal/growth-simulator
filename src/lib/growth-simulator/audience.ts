@@ -152,6 +152,19 @@ export const AUDIENCE_PERSONAS: Record<IndustryId, AudiencePersona> = {
     reachLabel: "digitally active travel bookers in India, with sharp seasonal demand spikes",
     notes: "Highly seasonal — benchmarks here should be read as an annual average, not a flat monthly assumption.",
   },
+  events: {
+    ageMin: 21,
+    ageMax: 40,
+    incomeBand: "₹3L–₹18L annual income",
+    employment: "Students, young professionals and corporate groups; B2C ticket buyers and B2B delegate/sponsor buyers both apply",
+    tier1Pct: 65,
+    referenceAgeMin: 21,
+    referenceAgeMax: 40,
+    reachLowM: 20,
+    reachHighM: 40,
+    reachLabel: "digitally active event-goers and ticket buyers in India for a comparable category (concerts/conferences/sports)",
+    notes: "Extremely event- and city-specific — a single national reach number is a poor proxy; narrow this to the actual event's genre and host city before planning spend.",
+  },
 };
 
 export function getAudiencePersona(industryId: IndustryId): AudiencePersona {
