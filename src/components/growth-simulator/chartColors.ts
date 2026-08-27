@@ -18,12 +18,18 @@ export const CATEGORICAL_SLOTS = {
 } as const;
 
 /**
- * 8 channels, all 8 slots — but Google buys either Search/Display/YouTube
- * OR the single App Campaigns (UAC) channel, never both, and ASO only
- * shows for app-acquisition goals, so at most 6 (website) or 5 (app) of
- * these ever render together. Both concurrent sets were validated
- * (adjacent pairs pass CVD/contrast; the contrast WARN is mitigated by
- * every chart's legend/labels staying in ink color, never the series hue).
+ * 9 channels, 8 slots — but Google buys either Search/Display/YouTube OR
+ * the single App Campaigns (UAC) channel, never both; ASO only shows for
+ * app-acquisition goals; and LinkedIn only shows for the same non-UAC
+ * (website-style) goals Search/Display/YouTube do, never alongside UAC —
+ * so at most 7 (website: search/display/youtube/facebook/instagram/
+ * linkedin/seo) or 5 (app: uac/facebook/instagram/seo/aso) of these ever
+ * render together. LinkedIn reuses ASO's slot on that same UAC-vs-website
+ * mutual-exclusivity the existing google-uac/search-display-youtube split
+ * already relies on — the two are never visible at once. Both concurrent
+ * sets were validated (adjacent pairs pass CVD/contrast; the contrast WARN
+ * is mitigated by every chart's legend/labels staying in ink color, never
+ * the series hue).
  */
 export const CHANNEL_COLOR_SLOT: Record<ChannelId, keyof typeof CATEGORICAL_SLOTS> = {
   "google-search": 1,
@@ -32,6 +38,7 @@ export const CHANNEL_COLOR_SLOT: Record<ChannelId, keyof typeof CATEGORICAL_SLOT
   "google-uac": 5,
   facebook: 4,
   instagram: 6,
+  linkedin: 8,
   seo: 7,
   aso: 8,
 };

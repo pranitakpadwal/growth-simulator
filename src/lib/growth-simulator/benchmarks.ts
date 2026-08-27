@@ -542,6 +542,19 @@ const financeChannelBenchmarks: Record<string, ChannelBenchmark> = {
     tier: 3,
     confidenceScore: 48,
   },
+  linkedin: {
+    channelId: "linkedin",
+    cpc: 320,
+    cpcP25: 150,
+    cpcP75: 650,
+    ctr: 0.55,
+    ctrP25: 0.35,
+    ctrP75: 0.8,
+    source:
+      "LinkedIn Ads India 2026 Sponsored Content CPC benchmarks (upGrowth, get-ryze industry guides) — Lead Gen Forms/Website Conversions objective; not split by finance vs. app vertical, since LinkedIn cost is driven far more by audience seniority/targeting than product category",
+    tier: 4,
+    confidenceScore: 45,
+  },
 };
 
 const appChannelBenchmarks: Record<string, ChannelBenchmark> = {
@@ -616,6 +629,19 @@ const appChannelBenchmarks: Record<string, ChannelBenchmark> = {
     source: "Google App Campaigns (UAC) benchmark reports, media/news vertical — blended Search/Display/YouTube/Discover placement, CPI treated as effective CPC",
     tier: 3,
     confidenceScore: 50,
+  },
+  linkedin: {
+    channelId: "linkedin",
+    cpc: 320,
+    cpcP25: 150,
+    cpcP75: 650,
+    ctr: 0.55,
+    ctrP25: 0.35,
+    ctrP75: 0.8,
+    source:
+      "LinkedIn Ads India 2026 Sponsored Content CPC benchmarks (upGrowth, get-ryze industry guides) — Lead Gen Forms/Website Conversions objective; not split by finance vs. app vertical, since LinkedIn cost is driven far more by audience seniority/targeting than product category",
+    tier: 4,
+    confidenceScore: 45,
   },
 };
 
