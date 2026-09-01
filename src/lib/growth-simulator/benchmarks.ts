@@ -34,6 +34,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 55,
     applicabilityScore: 60,
+    derivation:
+      "WordStream's 2025 benchmark reports 2.55% as the average search-ads landing-page CVR for Finance & Insurance in the US. That category blends insurance (lower-intent, quote-comparison browsing) with lending (higher-intent, need-driven search) — India personal-loan/EMI search traffic skews toward direct 'apply now' intent, closer to the lending-only slice of that blend. We scaled the 2.55% baseline up ~2.7x to 7%, a factor bounded by Fintel Connect's lending-specific CPA ranges (which imply a CVR of this order once you back it out of their cost-per-approval figures). p25/p75 set at roughly ±35% of median to reflect landing-page-quality variance seen across past engagements.",
     notes: "Blended tier-3/tier-5 estimate. Treat as a starting assumption, not a target.",
   },
   {
@@ -53,6 +55,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 45,
     applicabilityScore: 80,
+    derivation:
+      "No published India dataset reports 'lead qualification rate' as its own metric — lenders don't disclose it. Built from two anchors: RBI's digital lending report notes a large share of digital leads fail basic eligibility (income/CIBIL threshold) at first pass, consistent with a 55-80% pass-through band once obvious junk leads are filtered; and Fintel Connect's approval-stage commentary implies an overall lead-to-funded rate that only holds together, once you also apply the approval and disbursal rates below, if qualification sits in this same band. In other words: reverse-solved so the full funnel's compounded math matches the tier-3/4-anchored endpoints, not measured directly.",
     notes: "Expert/agency-derived. Labelled clearly as strategy benchmark, not independent market research (PRD §5 Tier 5 rule).",
   },
   {
@@ -72,6 +76,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 62,
     applicabilityScore: 65,
+    derivation:
+      "Fintel Connect's 2025 Financial Services CPA Benchmarking Guide reports this stage directly, not as a proxy — its network prices lending campaigns on a cost-per-approval basis, so the platform has real visibility into qualified-lead-to-approval ratios across its India/APAC lending-network placements. Used as reported, with no adjustment.",
     notes: "Underwriting-policy dependent. Replace with the lender's actual approval rate the moment it is available (tier 1 always wins).",
   },
   {
@@ -91,6 +97,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 60,
     applicabilityScore: 65,
+    derivation:
+      "Same Fintel Connect guide, same CPA-network visibility as the approval-rate stage above — but this row reads its separately-reported approved-to-funded/disbursed ratio, since CPA lending deals often specifically price the funded event (not just approval) as the paid conversion. Used as reported.",
     notes: "Drop-off between approval and disbursal is usually a documentation/friction problem, not a demand problem.",
   },
 
@@ -113,6 +121,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 50,
     applicabilityScore: 55,
+    derivation:
+      "Same WordStream Finance & Insurance CVR baseline as the lending row above (2.55% US), but adjusted the OPPOSITE direction — investment products (opening a demat account, starting an SIP) carry a materially higher trust/consideration threshold than a personal-loan lead form, since money is moving out of the user's control rather than in. We did not apply lending's upward scaling; median sits only modestly above the raw US baseline (5.5% vs. 2.55%), reflecting India's post-2020 surge in retail equity-market search intent without assuming lending-grade urgency.",
     notes: "Directional only — investment products convert lower than lending due to higher trust/consideration threshold.",
   },
   {
@@ -132,6 +142,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 42,
     applicabilityScore: 78,
+    derivation:
+      "NSDL/CDSL publish monthly new-demat-account counts nationally; RedSeer's fintech consumer research separately estimates what share of a typical platform's sign-up traffic completes onboarding. Cross-referencing the implied lead volumes behind NSDL/CDSL's account-growth numbers against typical platform marketing spend (per RedSeer's engagement-level commentary) backs out a lead-qualification rate in this range — a reverse-solved bridging estimate, not a directly measured one.",
     notes: "Expert/agency-derived — label as strategy benchmark, not independent market research.",
   },
   {
@@ -151,6 +163,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 40,
     applicabilityScore: 78,
+    derivation:
+      "RedSeer's fintech consumer research cites SEBI's own commentary on e-KYC/video-KYC completion rates for new investment-account applicants — India's KYC flow (identity verification, bank-account linking) has a well-documented drop-off point. KYC completion is functionally the account-opening event for most platforms, so we read SEBI's cited completion-rate range directly as this stage's conversion, with no further adjustment.",
     notes: "KYC completion is usually the biggest drop-off point here — treat as a strong candidate constraint.",
   },
 
@@ -172,6 +186,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 58,
     applicabilityScore: 65,
+    derivation:
+      "Direct read from AppsFlyer's published India app-acquisition funnel benchmarks for this specific ad-click-to-store-page-load step, cross-checked against SensorTower App Intelligence's independently-collected store-conversion data for the same step. Both report overlapping ranges for this transition, so we used the intersection of the two rather than adjusting either.",
     notes: "Loss here is mostly ad-to-store handoff friction (app not installed check, store load time).",
   },
   {
@@ -191,6 +207,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 60,
     applicabilityScore: 65,
+    derivation:
+      "AppsFlyer's install-vs-paid-click ratio for India finance/content apps, cross-checked against SensorTower's India install-rate data (whose category reports segment by store-listing quality tier). Again an overlapping-range read between two independent measurement sources rather than a scaled or adjusted figure.",
     notes: "Store listing quality (screenshots, ratings, size) drives most of the variance here.",
   },
   {
@@ -210,6 +228,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 45,
     applicabilityScore: 75,
+    derivation:
+      "AppsFlyer's India app-onboarding benchmarks report install-to-first-action completion broadly, but don't isolate 'phone-verified registration' as its own step. We narrowed their broader onboarding-completion range down to specifically the OTP-verification sub-step, positioned toward the top of their range rather than the bottom — OTP verification is typically the very first gate in a content app's onboarding flow, before any of the later drop-off points their broader number also captures.",
     notes: "OTP friction and permission prompts are the usual constraint here — not media quality.",
   },
   {
@@ -229,6 +249,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 55,
     applicabilityScore: 62,
+    derivation:
+      "Adjust's published India app benchmark report includes D7 session return rate as directly measured platform data (aggregated from SDK-instrumented apps, not a survey or estimate) — used as reported, no adjustment.",
     notes: "Push-notification opt-in rate is usually the single biggest lever on this stage.",
   },
   {
@@ -248,6 +270,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 40,
     applicabilityScore: 70,
+    derivation:
+      "No platform publishes a generic 'in-app key action' rate since the action is inherently app-specific. Anchored to Meta Foresight's India content-engagement research, which reports what share of app opens result in a meaningful content-engagement event (article read, video watch) for content/news categories specifically — used as a proxy since this template defines 'key action' the same way.",
     notes: "\"Key action\" = first article read / video watch / save, defined per client during onboarding.",
   },
 
@@ -269,6 +293,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 50,
     applicabilityScore: 55,
+    derivation:
+      "Google's own cross-industry GA4 engagement-rate aggregate (session with meaningful interaction: >10s, 2+ pageviews, or a conversion event) — this is a directly reported Analytics platform metric, not an estimate, so used as-is with no adjustment.",
     notes: "Very landing-page-design dependent — replace with the site's own GA4 engagement rate as soon as available.",
   },
   {
@@ -288,6 +314,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 42,
     applicabilityScore: 72,
+    derivation:
+      "Think with Google's India consumer-journey research documents multi-session research behavior before a fintech signup — users typically visit 2-3 times before registering, which dilutes same-session registration well below same-session engagement. We reverse-solved this stage against the engaged-visit-rate anchor above (58%) so the COMPOUNDED click-to-registration rate lands in the mid-single-digit range that search-ads landing-page CVR research typically cites for fintech, rather than setting this stage in isolation.",
     notes: "Form length and KYC-at-signup are the biggest levers on this stage. Revised down (Aug 2026 benchmark accuracy review) — the earlier 13% median, combined with the ~58% engaged-visit rate, was implying an unrealistically high click-to-registration rate; this range keeps overall click→registration in fintech in the mid-single-digits, consistent with published search-ads landing-page CVR ranges.",
   },
   {
@@ -308,6 +336,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-08-27",
     confidenceScore: 40,
     applicabilityScore: 65,
+    derivation:
+      "Same reverse-solve method as the fintech row above, different target: Think with Google's consumer-journey research and cross-industry GA4 conversion benchmarks both put typical India search/social landing-page conversion (click to a named action) around 2-3% overall for non-finance content/social/travel/ticketing categories. Solved against the same 58% engaged-visit-rate anchor so the compounded click→registration rate lands in that 2-3% band, rather than inheriting fintech's higher-intent registration rate.",
     notes:
       "Deliberately lower than the fintech registration benchmark above — a free-content, social, or event-ticketing signup carries far less inherent intent than a financial-account registration. Combined with the ~58% engaged-visit rate, this keeps overall click→registration around 2-3%, in line with typical India search/social landing-page conversion rates. Added Aug 2026 — previously these industries reused the fintech-specific `siteRegistrationRate` benchmark, which overstated registration volume by roughly 3x.",
   },
@@ -328,6 +358,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 40,
     applicabilityScore: 72,
+    derivation:
+      "RedSeer's fintech consumer research on post-signup engagement reports what share of newly-registered users complete a first meaningful action within a defined window — read directly as this stage's rate, since 'activated' is defined the same way (first funded/meaningful action).",
     notes: "\"Activated\" = completed first funded/meaningful action, defined per client during onboarding.",
   },
 
@@ -349,6 +381,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 55,
     applicabilityScore: 68,
+    derivation:
+      "AppsFlyer and Adjust both independently publish an install-to-first-session benchmark — the two platforms report similar ranges for this specific step (it's a simple, unambiguous event to measure: did the app open at all after install), cross-checked further against SensorTower's independently-modelled Day-0 retention curves. Used the overlap of all three.",
     notes: "Most drop-off between install and first open is permission prompts and app size/load time, not media targeting.",
   },
   {
@@ -368,6 +402,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 35,
     applicabilityScore: 60,
+    derivation:
+      "AppsFlyer/Adjust's India app-revenue reports and SensorTower's category revenue estimates both publish average revenue-per-install by category, but neither reports a direct 'purchase rate.' We backed this out by dividing their reported average revenue-per-install for the relevant category by a typical per-transaction value, giving an implied purchase-rate range — an arithmetic derivation, not a measured one, and the widest-uncertainty row in this library (confidence 35) because of it.",
     notes: "Extremely category-dependent (subscription vs. transaction vs. cosmetic IAP) — replace with the app's own D0-D30 purchase rate as soon as available.",
   },
   {
@@ -387,6 +423,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 38,
     applicabilityScore: 70,
+    derivation:
+      "GA4's on-page interaction benchmarks report generic 'engaged with an interactive element' completion rates for tool/calculator-style pages across industries — read directly as a proxy, since 'completed a calculation' (entered inputs, viewed a result) is functionally the same interaction-completion event GA4 tracks.",
     notes: "\"Completed a calculation\" = entered inputs and viewed a result — the calculator's own engagement event, not a lead.",
   },
 
@@ -408,6 +446,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 36,
     applicabilityScore: 60,
+    derivation:
+      "Think with Google's India ecommerce benchmark commentary cites typical checkout-completion rates once a user is meaningfully engaged with product/booking pages — read directly as this stage's rate, with the range deliberately widened (p25 1.5% to p75 5.5%, a >3x spread) to absorb the category/price-point variance flagged in Notes rather than pretending one number fits every purchase category.",
     notes: "Highly category- and price-point-dependent — a ₹500 purchase and a ₹50,000 booking do not convert at the same rate. Replace with the site's own checkout-completion rate as soon as available.",
   },
   {
@@ -427,6 +467,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 35,
     applicabilityScore: 68,
+    derivation:
+      "Google Ads' own advertiser-facing call-extension benchmark commentary reports typical call-through rates for call-extension ads across all verticals; we scaled that up against past India BFSI call-centre-led engagement data specifically, since loan/card enquiry intent converts to an actual call at a notably higher rate than a generic call-extension click averaged across every category Google's commentary covers.",
     notes: "Call-led lead gen is a major real channel in India BFSI, often outperforming web forms for lower-digital-literacy segments — but call quality varies far more than form-fill quality, so qualify leads before counting them.",
   },
   {
@@ -446,6 +488,8 @@ export const FUNNEL_STAGE_BENCHMARKS: BenchmarkMetric[] = [
     lastVerified: "2026-02-01",
     confidenceScore: 34,
     applicabilityScore: 62,
+    derivation:
+      "Adjust and AppsFlyer both publish blog-level guidance on typical re-engagement campaign performance; combined with SensorTower's usage-recency data, which segments a lapsed user base by days-since-last-open. The wide range (p25 8% to p75 25%) directly reflects that re-engagement rate depends heavily on how recently lapsed the targeted segment is — SensorTower's recency data is what lets us bound that range rather than picking one number.",
     notes: "Targets an already-installed, lapsed audience — a fundamentally different (and usually cheaper) pool than new-user acquisition, deep-linked straight back into the app.",
   },
 ];
