@@ -96,7 +96,7 @@ export default function MethodologyPage() {
           <ol className="mt-4 flex flex-col gap-3">
             {TIERS.map((t) => (
               <li key={t.tier} className="flex gap-3 rounded-lg border border-line bg-surface p-4">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-contrast">
                   {t.tier}
                 </span>
                 <div>

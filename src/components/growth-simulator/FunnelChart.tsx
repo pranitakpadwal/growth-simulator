@@ -62,7 +62,7 @@ export default function FunnelChart({
               <span className="w-36 shrink-0 text-xs text-foreground/60">
                 {stage.label}
                 {stage.isValueStage && (
-                  <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">
+                  <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-semibold uppercase text-brand-contrast">
                     Goal
                   </span>
                 )}

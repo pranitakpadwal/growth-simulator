@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  /* Emerald & Ink */
-  --background: #faf9f6; /* warm off-white */
-  --foreground: #14231d; /* deep green-ink */
+  /* Ink & Paper — a deliberately monochrome palette. No hue anywhere;
+     every color below is black, white, or a neutral gray. */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
   --surface: #ffffff;
-  --border: #e7e4dc;
-  --muted: #6b7280;
-  --brand: #0b6b4f;
-  --brand-dark: #0b3d2e;
-  --brand-soft: #e9f2ed;
+  --border: #e5e5e5;
+  --muted: #737373;
+  --brand: #0a0a0a;
+  --brand-dark: #000000;
+  --brand-soft: #f2f2f2;
+  /* Text color to put ON TOP of a --brand-colored background — inverts
+     alongside --brand so a "bg-brand text-brand-contrast" button stays
+     legible in both themes instead of assuming brand is always dark. */
+  --brand-contrast: #ffffff;
 }
 
 @theme inline {
@@ -20,6 +25,7 @@
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-contrast: var(--brand-contrast);
   --font-sans: var(--font-geist-sans);
   --font-display: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
@@ -27,15 +33,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0b0f0d;
-    --foreground: #e8ece9;
-    --surface: #12161400;
-    --surface: #141a17;
-    --border: #232b27;
-    --muted: #9aa39e;
-    --brand: #2fae86;
-    --brand-dark: #7fd4b6;
-    --brand-soft: #16241d;
+    --background: #0a0a0a;
+    --foreground: #f2f2f2;
+    --surface: #151515;
+    --border: #2a2a2a;
+    --muted: #a1a1a1;
+    --brand: #f2f2f2;
+    --brand-dark: #ffffff;
+    --brand-soft: #1f1f1f;
+    --brand-contrast: #0a0a0a;
   }
 }
 
@@ -45,8 +51,20 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Display headings use the serif by default where the class is applied. */
+/* Range sliders and checkboxes default to the browser's system blue — the
+   one UI element Tailwind classes can't reach. Pin it to the ink accent so
+   nothing on the page carries a stray hue. */
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--brand);
+}
+
+/* Display headings — same grotesk sans as body copy, just heavier and
+   tighter-tracked, not a serif. A serif+teal pairing is the single most
+   common "generated SaaS landing page" tell; dropping it is as much a part
+   of the monochrome pass above as removing the color. */
 .font-display {
-  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-optical-sizing: auto;
+  letter-spacing: -0.02em;
 }

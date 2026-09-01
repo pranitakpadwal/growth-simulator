@@ -123,7 +123,7 @@ export default function BusinessSetupPanel({
               type="button"
               onClick={() => onPlatformChange("website")}
               className={`flex-1 rounded px-2 py-1 ${
-                platform === "website" ? "bg-brand text-white" : "text-foreground/60"
+                platform === "website" ? "bg-brand text-brand-contrast" : "text-foreground/60"
               }`}
             >
               Website
@@ -131,7 +131,7 @@ export default function BusinessSetupPanel({
             <button
               type="button"
               onClick={() => onPlatformChange("app")}
-              className={`flex-1 rounded px-2 py-1 ${platform === "app" ? "bg-brand text-white" : "text-foreground/60"}`}
+              className={`flex-1 rounded px-2 py-1 ${platform === "app" ? "bg-brand text-brand-contrast" : "text-foreground/60"}`}
             >
               App
             </button>
@@ -165,7 +165,7 @@ export default function BusinessSetupPanel({
                 type="button"
                 onClick={() => onPlanModeChange("budget")}
                 className={`rounded-full px-2 py-0.5 ${
-                  planMode === "budget" ? "bg-brand text-white" : "text-foreground/60"
+                  planMode === "budget" ? "bg-brand text-brand-contrast" : "text-foreground/60"
                 }`}
               >
                 I know my budget
@@ -174,7 +174,7 @@ export default function BusinessSetupPanel({
                 type="button"
                 onClick={() => onPlanModeChange("goal")}
                 className={`rounded-full px-2 py-0.5 ${
-                  planMode === "goal" ? "bg-brand text-white" : "text-foreground/60"
+                  planMode === "goal" ? "bg-brand text-brand-contrast" : "text-foreground/60"
                 }`}
               >
                 I have a target
