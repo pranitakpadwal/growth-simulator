@@ -1,4 +1,4 @@
-import Link from "next/link";
+import SiteHeader from "@/components/growth-simulator/SiteHeader";
 
 export const metadata = {
   title: "Methodology & sources",
@@ -38,6 +38,41 @@ const TIERS: { tier: number; label: string; description: string }[] = [
   },
 ];
 
+const DERIVATION_STEPS = [
+  {
+    n: 1,
+    title: "Start from a real, published number",
+    body: "Never a blank guess. Every benchmark starts from at least one number a real platform, vendor, or regulator actually published — a WordStream CVR report, an AppsFlyer funnel benchmark, an RBI lending trend note, a SensorTower category estimate.",
+  },
+  {
+    n: 2,
+    title: "State the gap",
+    body: "A published number is almost never an exact match — wrong geography (US, not India), wrong category (all finance & insurance, not lending specifically), or a step nobody publishes at all. This gap is named explicitly, not glossed over.",
+  },
+  {
+    n: 3,
+    title: "Bridge it, with a stated method",
+    body: (
+      <>
+        Three named methods: <strong>direct read</strong> (already matches — used as-is), <strong>scaled</strong>{" "}
+        (an explicit multiplier, reason stated), or <strong>reverse-solved</strong> (an unpublished stage sized so
+        the funnel&apos;s compounded math matches a trustworthy end-to-end number).
+      </>
+    ),
+  },
+  {
+    n: 4,
+    title: "Show the work, per metric",
+    body: (
+      <>
+        Click any <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-amber-800">Benchmark</span> badge
+        in the simulator — every one opens to &quot;How this was derived&quot; with the actual chain, not just a
+        source name.
+      </>
+    ),
+  },
+];
+
 const SOURCES: { name: string; usedFor: string }[] = [
   { name: "Google Ads / Google App Campaigns (UAC) benchmark reports", usedFor: "Search, Display, YouTube, and app-install-campaign CPC/CTR benchmarks" },
   { name: "Meta Ads benchmark reports (Foresight)", usedFor: "Facebook and Instagram CPC/CTR and engagement benchmarks" },
@@ -57,35 +92,20 @@ const SOURCES: { name: string; usedFor: string }[] = [
 export default function MethodologyPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-6 sm:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs font-medium uppercase tracking-wide text-brand">
-              Growth Strategy Simulator · India
-            </span>
-            <nav className="flex gap-4 text-xs text-foreground/60">
-              <Link href="/" className="hover:text-brand">
-                Home
-              </Link>
-              <Link href="/simulator" className="hover:text-brand">
-                Try the simulator
-              </Link>
-              <Link href="/glossary" className="hover:text-brand">
-                Glossary
-              </Link>
-            </nav>
-          </div>
+      <SiteHeader active="methodology" />
+      <div className="border-b border-line">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2 px-4 py-8 sm:px-8">
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Methodology &amp; sources
           </h1>
-          <p className="max-w-2xl text-sm text-foreground/70">
+          <p className="text-sm text-foreground/70">
             No number without provenance. Every benchmark shown in the simulator — every CPC, click-through
             rate, funnel conversion rate — is tagged with a source, a confidence score, and an
             applicability score, and traces back to one of five tiers below.
           </p>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-8">
+      </div>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-8">
         <section>
           <h2 className="font-display text-lg font-semibold text-foreground">The five-tier hierarchy</h2>
           <p className="mt-1 text-sm text-foreground/60">
@@ -93,10 +113,16 @@ export default function MethodologyPage() {
             better exists at the granularity the simulator needs (e.g. India-specific, this industry,
             this funnel stage).
           </p>
-          <ol className="mt-4 flex flex-col gap-3">
+
+          <TierBar />
+
+          <ol className="mt-5 flex flex-col gap-3">
             {TIERS.map((t) => (
-              <li key={t.tier} className="flex gap-3 rounded-lg border border-line bg-surface p-4">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-contrast">
+              <li key={t.tier} className="flex gap-3 rounded-lg border border-line p-4">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-brand-contrast"
+                  style={{ backgroundColor: "var(--foreground)", opacity: 1 - (t.tier - 1) * 0.14 }}
+                >
                   {t.tier}
                 </span>
                 <div>
@@ -108,61 +134,19 @@ export default function MethodologyPage() {
           </ol>
         </section>
 
-        <section className="mt-10">
+        <section className="mt-12">
           <h2 className="font-display text-lg font-semibold text-foreground">
             How a conversion-rate benchmark is actually derived
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-foreground/60">
-            The tier tells you <em>who</em> published the underlying data. It doesn&apos;t tell you the arithmetic
-            that turned their number into ours — that&apos;s the question that comes up most, so here&apos;s the
-            method in full, with a real example from the funnel library.
+          <p className="mt-1 text-sm text-foreground/60">
+            The tier tells you <em>who</em> published the underlying data. It doesn&apos;t tell you the
+            arithmetic that turned their number into ours — that&apos;s the question that comes up most, so
+            here&apos;s the method in full, with a real example from the funnel library.
           </p>
-          <ol className="mt-4 flex flex-col gap-3">
-            <li className="rounded-lg border border-line bg-surface p-4">
-              <div className="font-display text-sm font-semibold text-foreground">
-                1. Start from a real, named, published number
-              </div>
-              <p className="mt-1 text-sm text-foreground/70">
-                Never a blank guess. Every benchmark starts from at least one number a real platform, vendor, or
-                regulator actually published — a WordStream CVR report, an AppsFlyer funnel benchmark, an RBI
-                lending trend note, a SensorTower category estimate.
-              </p>
-            </li>
-            <li className="rounded-lg border border-line bg-surface p-4">
-              <div className="font-display text-sm font-semibold text-foreground">
-                2. State the gap between what they measured and what we need
-              </div>
-              <p className="mt-1 text-sm text-foreground/70">
-                A published number is almost never an exact match — wrong geography (US, not India), wrong
-                category (all finance & insurance, not lending specifically), or a step nobody publishes at all
-                (e.g. no platform reports &quot;lead qualification rate&quot; as its own metric). This gap is
-                named explicitly, not glossed over.
-              </p>
-            </li>
-            <li className="rounded-lg border border-line bg-surface p-4">
-              <div className="font-display text-sm font-semibold text-foreground">
-                3. Bridge the gap with a stated, defensible adjustment
-              </div>
-              <p className="mt-1 text-sm text-foreground/70">
-                Three bridging methods, always named per metric: <strong>direct read</strong> (the published
-                number already matches — used as-is), <strong>scaled</strong> (an explicit multiplier applied,
-                with the reason stated — e.g. India lending intent runs higher than a blended US finance &amp;
-                insurance average), or <strong>reverse-solved</strong> (an unpublished middle-funnel step is
-                sized so the full funnel&apos;s compounded math matches a trustworthy end-to-end number that
-                <em> is</em> published or measured).
-              </p>
-            </li>
-            <li className="rounded-lg border border-line bg-surface p-4">
-              <div className="font-display text-sm font-semibold text-foreground">4. Show the work, per metric</div>
-              <p className="mt-1 text-sm text-foreground/70">
-                Click any <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-amber-800">Benchmark</span>{" "}
-                badge in the simulator — every one opens to a &quot;How this was derived&quot; section with the
-                actual chain above spelled out for that specific number, not just a source name.
-              </p>
-            </li>
-          </ol>
 
-          <div className="mt-4 rounded-lg border border-line bg-surface p-5">
+          <DerivationFlow />
+
+          <div className="mt-8 rounded-lg border border-line p-5">
             <div className="font-display text-sm font-semibold text-foreground">
               Worked example — Personal Loans &quot;Qualification Rate&quot; (68%)
             </div>
@@ -181,7 +165,7 @@ export default function MethodologyPage() {
           </div>
         </section>
 
-        <section className="mt-10">
+        <section className="mt-12">
           <h2 className="font-display text-lg font-semibold text-foreground">Every source used</h2>
           <p className="mt-1 text-sm text-foreground/60">
             Third-party datasets and platform reports the benchmark library draws on. Where a figure isn&apos;t
@@ -190,7 +174,7 @@ export default function MethodologyPage() {
           </p>
           <div className="mt-4 overflow-x-auto rounded-lg border border-line">
             <table className="w-full min-w-[480px] text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wide text-foreground/50">
+              <thead className="bg-brand-soft text-xs uppercase tracking-wide text-foreground/50">
                 <tr>
                   <th className="px-4 py-2">Source</th>
                   <th className="px-4 py-2">Used for</th>
@@ -199,7 +183,10 @@ export default function MethodologyPage() {
               <tbody className="divide-y divide-line">
                 {SOURCES.map((s) => (
                   <tr key={s.name}>
-                    <td className="px-4 py-2.5 font-medium text-foreground">{s.name}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 font-medium text-foreground">
+                      <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-foreground/40 align-middle" />
+                      {s.name}
+                    </td>
                     <td className="px-4 py-2.5 text-foreground/70">{s.usedFor}</td>
                   </tr>
                 ))}
@@ -208,7 +195,7 @@ export default function MethodologyPage() {
           </div>
         </section>
 
-        <section className="mt-10 rounded-lg border border-line bg-surface p-5">
+        <section className="mt-12 rounded-lg border border-line p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Confidence &amp; applicability scores
           </h2>
@@ -221,7 +208,7 @@ export default function MethodologyPage() {
           </p>
         </section>
 
-        <section className="mt-10">
+        <section className="mt-12">
           <h2 className="font-display text-base font-semibold text-foreground">What this tool isn&apos;t</h2>
           <p className="mt-1 text-sm text-foreground/70">
             A forecast, not a promise. Benchmarks describe what&apos;s typical across many advertisers in a
@@ -234,6 +221,50 @@ export default function MethodologyPage() {
       <footer className="border-t border-line px-4 py-6 text-center text-xs text-foreground/40 sm:px-8">
         Growth Strategy Simulator — a planning tool, not a guarantee of outcomes.
       </footer>
+    </div>
+  );
+}
+
+/** Five bars, narrowing and lightening left to right — trust narrows as you move down the tiers. */
+function TierBar() {
+  return (
+    <div className="mt-4 flex h-9 gap-1">
+      {TIERS.map((t, i) => (
+        <div
+          key={t.tier}
+          className="flex items-center justify-center rounded text-xs font-semibold text-brand-contrast"
+          style={{
+            flex: 5 - i,
+            backgroundColor: "var(--foreground)",
+            opacity: 1 - i * 0.18,
+          }}
+          title={t.label}
+        >
+          T{t.tier}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Connected numbered steps — desktop: a horizontal line through 4 nodes; mobile: stacks. */
+function DerivationFlow() {
+  return (
+    <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-4 sm:gap-3">
+      {DERIVATION_STEPS.map((step, i) => (
+        <div key={step.n} className="relative flex flex-col gap-2 rounded-lg border border-line p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-brand-contrast">
+              {step.n}
+            </span>
+            {i < DERIVATION_STEPS.length - 1 && (
+              <span className="hidden h-px flex-1 bg-line sm:block" aria-hidden="true" />
+            )}
+          </div>
+          <div className="font-display text-sm font-semibold text-foreground">{step.title}</div>
+          <p className="text-xs text-foreground/60">{step.body}</p>
+        </div>
+      ))}
     </div>
   );
 }

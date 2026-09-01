@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Logo from "@/components/growth-simulator/Logo";
+import SiteHeader from "@/components/growth-simulator/SiteHeader";
 
 export const metadata = {
   title: "Growth Strategy Simulator — plan your India marketing spend",
@@ -46,33 +48,7 @@ const CONSTRAINT_CHECKS = [
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-brand text-xs font-bold text-brand-contrast">
-              G
-            </span>
-            <span className="text-sm font-semibold tracking-tight text-foreground">Growth Simulator</span>
-          </Link>
-          <nav className="flex items-center gap-6 text-sm text-foreground/60">
-            <Link href="/glossary" className="hidden hover:text-foreground sm:inline">
-              Glossary
-            </Link>
-            <Link href="/methodology" className="hidden hover:text-foreground sm:inline">
-              Methodology
-            </Link>
-            <a href="#talk-to-us" className="hidden hover:text-foreground sm:inline">
-              Talk to us
-            </a>
-            <Link
-              href="/simulator"
-              className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-contrast hover:opacity-85"
-            >
-              Try the simulator
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader active="home" />
 
       <main className="flex-1">
         {/* Hero */}
@@ -240,12 +216,7 @@ export default function HomePage() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm sm:flex-row sm:items-start sm:justify-between sm:px-8">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded bg-brand text-xs font-bold text-brand-contrast">
-                G
-              </span>
-              <span className="font-semibold text-foreground">Growth Simulator</span>
-            </div>
+            <Logo />
             <p className="max-w-xs text-foreground/50">
               A planning tool, not a guarantee of outcomes — India Google, Meta &amp; LinkedIn media planning.
             </p>
