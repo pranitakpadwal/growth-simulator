@@ -57,6 +57,14 @@ export interface BenchmarkMetric {
   confidenceScore: number;
   /** 0-100, per PRD §9 — how applicable this benchmark is to an India business in this vertical. */
   applicabilityScore: number;
+  /**
+   * The actual arithmetic/triangulation chain from the cited source(s) to
+   * this specific number — not just "who published it" (that's `source`)
+   * but "how did their number become our number." This is what a client
+   * asking "how did you get 68%?" needs to see; `notes` stays for caveats
+   * and what-to-replace-this-with-first guidance instead.
+   */
+  derivation: string;
   notes: string;
 }
 

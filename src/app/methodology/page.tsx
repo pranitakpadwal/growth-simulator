@@ -109,6 +109,79 @@ export default function MethodologyPage() {
         </section>
 
         <section className="mt-10">
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            How a conversion-rate benchmark is actually derived
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-foreground/60">
+            The tier tells you <em>who</em> published the underlying data. It doesn&apos;t tell you the arithmetic
+            that turned their number into ours — that&apos;s the question that comes up most, so here&apos;s the
+            method in full, with a real example from the funnel library.
+          </p>
+          <ol className="mt-4 flex flex-col gap-3">
+            <li className="rounded-lg border border-line bg-surface p-4">
+              <div className="font-display text-sm font-semibold text-foreground">
+                1. Start from a real, named, published number
+              </div>
+              <p className="mt-1 text-sm text-foreground/70">
+                Never a blank guess. Every benchmark starts from at least one number a real platform, vendor, or
+                regulator actually published — a WordStream CVR report, an AppsFlyer funnel benchmark, an RBI
+                lending trend note, a SensorTower category estimate.
+              </p>
+            </li>
+            <li className="rounded-lg border border-line bg-surface p-4">
+              <div className="font-display text-sm font-semibold text-foreground">
+                2. State the gap between what they measured and what we need
+              </div>
+              <p className="mt-1 text-sm text-foreground/70">
+                A published number is almost never an exact match — wrong geography (US, not India), wrong
+                category (all finance & insurance, not lending specifically), or a step nobody publishes at all
+                (e.g. no platform reports &quot;lead qualification rate&quot; as its own metric). This gap is
+                named explicitly, not glossed over.
+              </p>
+            </li>
+            <li className="rounded-lg border border-line bg-surface p-4">
+              <div className="font-display text-sm font-semibold text-foreground">
+                3. Bridge the gap with a stated, defensible adjustment
+              </div>
+              <p className="mt-1 text-sm text-foreground/70">
+                Three bridging methods, always named per metric: <strong>direct read</strong> (the published
+                number already matches — used as-is), <strong>scaled</strong> (an explicit multiplier applied,
+                with the reason stated — e.g. India lending intent runs higher than a blended US finance &amp;
+                insurance average), or <strong>reverse-solved</strong> (an unpublished middle-funnel step is
+                sized so the full funnel&apos;s compounded math matches a trustworthy end-to-end number that
+                <em> is</em> published or measured).
+              </p>
+            </li>
+            <li className="rounded-lg border border-line bg-surface p-4">
+              <div className="font-display text-sm font-semibold text-foreground">4. Show the work, per metric</div>
+              <p className="mt-1 text-sm text-foreground/70">
+                Click any <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-amber-800">Benchmark</span>{" "}
+                badge in the simulator — every one opens to a &quot;How this was derived&quot; section with the
+                actual chain above spelled out for that specific number, not just a source name.
+              </p>
+            </li>
+          </ol>
+
+          <div className="mt-4 rounded-lg border border-line bg-surface p-5">
+            <div className="font-display text-sm font-semibold text-foreground">
+              Worked example — Personal Loans &quot;Qualification Rate&quot; (68%)
+            </div>
+            <p className="mt-2 text-sm text-foreground/70">
+              No lender publishes &quot;what % of leads pass basic eligibility.&quot; So instead of a guess: RBI&apos;s
+              digital lending report notes a large share of digital leads fail basic income/CIBIL screening at
+              first pass, consistent with a 55–80% pass-through band. Separately, Fintel Connect&apos;s CPA
+              benchmarking guide reports the approval rate and disbursal rate stages directly (35% and 60%
+              median, both Tier 4 — real advertiser-network data). For the funnel&apos;s overall click-to-funded
+              rate to land where Fintel Connect&apos;s own cost-per-approval pricing implies it should, the
+              missing qualification-rate stage has to sit in that same 55–80% band. That&apos;s the 68% median —
+              not measured directly, but the number the rest of the (measured) funnel requires. Labelled Tier 5,
+              confidence 45/100, precisely because it&apos;s solved, not observed — and replaced instantly the
+              day a lender&apos;s own CRM has the real figure.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-10">
           <h2 className="font-display text-lg font-semibold text-foreground">Every source used</h2>
           <p className="mt-1 text-sm text-foreground/60">
             Third-party datasets and platform reports the benchmark library draws on. Where a figure isn&apos;t
