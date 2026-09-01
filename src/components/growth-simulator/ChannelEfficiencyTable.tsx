@@ -44,7 +44,7 @@ export default function ChannelEfficiencyTable({
                   <td className="px-3 py-2 font-medium text-foreground">
                     {channel.label}
                     {topPaid && r.channelId === topPaid.channelId && (
-                      <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">
+                      <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-brand-contrast">
                         NEXT RUPEE
                       </span>
                     )}

@@ -60,7 +60,7 @@ function LadderRow({
         <span className={highlight ? "font-semibold text-brand-dark" : "text-foreground/80"}>
           Cost per {label.toLowerCase()}
           {highlight && (
-            <span className="ml-2 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
+            <span className="ml-2 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold uppercase text-brand-contrast">
               = Your CAC
             </span>
           )}
