@@ -102,6 +102,7 @@ export type Platform = "website" | "app";
 
 export type GoalId =
   | "website-lead-form"
+  | "website-investment"
   | "app-install"
   | "app-install-open"
   | "app-lead-form"

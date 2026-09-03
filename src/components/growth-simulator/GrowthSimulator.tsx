@@ -188,11 +188,18 @@ export default function GrowthSimulator() {
   });
   const [audience, setAudience] = useState<AudiencePersona>(() => getAudiencePersona(industryId));
 
+  // For an app-acquisition goal, Google defaults to the single blended App
+  // Campaign — but plenty of advertisers also buy Display and YouTube for
+  // app installs as separate, manually-managed line items (video ads
+  // driving installs, Display retargeting), not just the auto-placed
+  // blended product. This lets that be a choice instead of a hard rule.
+  const [preferSplitForApp, setPreferSplitForApp] = useState(false);
+
   const industry = useMemo(() => getIndustry(industryId), [industryId]);
   const availableGoals = useMemo(() => goalsForPlatform(industry, platform), [industry, platform]);
   const template = useMemo(() => resolveFunnelTemplate(industryId, goalId), [industryId, goalId]);
-  const usesGoogleUac = isGoogleUacGoal(goalId);
-  const visibleChannels = useMemo(() => channelsForGoal(goalId), [goalId]);
+  const usesGoogleUac = isGoogleUacGoal(goalId) && !preferSplitForApp;
+  const visibleChannels = useMemo(() => channelsForGoal(goalId, preferSplitForApp), [goalId, preferSplitForApp]);
   const visibleTabs = useMemo(() => {
     const tabs = Array.from(new Set(visibleChannels.map((c) => c.tab)));
     return [...tabs, "summary" as const];
@@ -206,6 +213,7 @@ export default function GrowthSimulator() {
     setIndustryId(nextIndustry.id);
     setPlatform(nextPlatform);
     setGoalId(nextGoalId);
+    setPreferSplitForApp(false);
     setEconomics(defaultEconomics(nextIndustry.id, nextGoalId));
     setAudience(getAudiencePersona(nextIndustry.id));
     setChannelCpc(initialCpcMap(nextIndustry.group, AUDIENCE_STRATEGIES[audienceStrategy].cpcMult));
@@ -219,6 +227,7 @@ export default function GrowthSimulator() {
     const nextTemplate = resolveFunnelTemplate(industryId, nextGoalId);
     setPlatform(next);
     setGoalId(nextGoalId);
+    setPreferSplitForApp(false);
     setEconomics(defaultEconomics(industryId, nextGoalId));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
     setActiveTab(channelsForGoal(nextGoalId)[0]?.tab ?? "summary");
@@ -234,7 +243,7 @@ export default function GrowthSimulator() {
     setGoalId(id as GoalId);
     setEconomics(defaultEconomics(industryId, id as GoalId));
     setStageAssumptions(initialStageMap(nextTemplate.id, nextTemplate.stages));
-    setActiveTab(channelsForGoal(id)[0]?.tab ?? "summary");
+    setActiveTab(channelsForGoal(id, preferSplitForApp)[0]?.tab ?? "summary");
   }
 
   function setStageValue(metricId: string, value: number) {
@@ -675,12 +684,34 @@ export default function GrowthSimulator() {
 
       {activeTab === "google" && (
         <div className="flex flex-col gap-6">
+          {isGoogleUacGoal(goalId) && (
+            <div className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
+              <span className="text-xs text-foreground/60">Buying app installs on Google as</span>
+              <div className="flex rounded-full border border-line p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPreferSplitForApp(false)}
+                  className={`rounded-full px-3 py-1 ${!preferSplitForApp ? "bg-brand text-brand-contrast" : "text-foreground/60"}`}
+                >
+                  One blended App Campaign
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreferSplitForApp(true)}
+                  className={`rounded-full px-3 py-1 ${preferSplitForApp ? "bg-brand text-brand-contrast" : "text-foreground/60"}`}
+                >
+                  Search / Display / YouTube separately
+                </button>
+              </div>
+            </div>
+          )}
           {usesGoogleUac ? (
             <>
               <p className="text-sm text-foreground/70">
                 Google sells app-acquisition and re-engagement campaigns as one blended <strong>App Campaign</strong>{" "}
                 (formerly Universal App Campaigns) — it auto-places across Search, Display, YouTube and Discover
-                rather than being bought separately, so there&apos;s one channel here instead of three.
+                rather than being bought separately, so there&apos;s one channel here instead of three by default.
+                Prefer to manage them as separate line items? Switch above.
               </p>
               <ChannelPanel
                 channelId="google-uac"
