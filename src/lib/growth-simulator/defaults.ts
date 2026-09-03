@@ -52,25 +52,30 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "business:website-registration": { revenuePerCustomerInr: 300, variableCostPerCustomerInr: 20, contributionMarginPct: 58 },
   "travel:website-registration": { revenuePerCustomerInr: 100, variableCostPerCustomerInr: 8, contributionMarginPct: 52 },
 
-  // Finance industries on the App platform — same verticals, lower-intent
-  // stages (install, first open) are worth less than the full web funnel's
-  // funded-customer value; in-app-lead-form stops at registration, not
-  // disbursal, so it's valued well below the website funnel's endpoint.
+  // Finance industries on the App platform — install/install-open stay
+  // low-intent (worth less than a funded customer). "app-lead-form" for
+  // the four lending industries below now runs through approval/KYC/
+  // disbursal to a funded customer (see app-lead-form-lending in
+  // catalog.ts), so it's valued close to the equivalent website goal,
+  // not the old in-app-lead-only figure. Investments swapped its
+  // app-platform goal to "app-investment" entirely (own funded-investor
+  // endpoint) — News/Social/Business/Travel/Events still stop at
+  // registration on "app-lead-form", so their figures below are untouched.
   "personal-loans:app-install": { revenuePerCustomerInr: 80, variableCostPerCustomerInr: 8, contributionMarginPct: 55 },
   "personal-loans:app-install-open": { revenuePerCustomerInr: 110, variableCostPerCustomerInr: 10, contributionMarginPct: 55 },
-  "personal-loans:app-lead-form": { revenuePerCustomerInr: 800, variableCostPerCustomerInr: 60, contributionMarginPct: 60 },
+  "personal-loans:app-lead-form": { revenuePerCustomerInr: 5500, variableCostPerCustomerInr: 400, contributionMarginPct: 68 },
   "emi-calculator:app-install": { revenuePerCustomerInr: 50, variableCostPerCustomerInr: 6, contributionMarginPct: 50 },
   "emi-calculator:app-install-open": { revenuePerCustomerInr: 70, variableCostPerCustomerInr: 8, contributionMarginPct: 50 },
-  "emi-calculator:app-lead-form": { revenuePerCustomerInr: 500, variableCostPerCustomerInr: 40, contributionMarginPct: 58 },
+  "emi-calculator:app-lead-form": { revenuePerCustomerInr: 5000, variableCostPerCustomerInr: 380, contributionMarginPct: 66 },
   "epf:app-install": { revenuePerCustomerInr: 60, variableCostPerCustomerInr: 7, contributionMarginPct: 55 },
   "epf:app-install-open": { revenuePerCustomerInr: 85, variableCostPerCustomerInr: 9, contributionMarginPct: 55 },
-  "epf:app-lead-form": { revenuePerCustomerInr: 600, variableCostPerCustomerInr: 45, contributionMarginPct: 58 },
+  "epf:app-lead-form": { revenuePerCustomerInr: 2300, variableCostPerCustomerInr: 290, contributionMarginPct: 63 },
   "credit-cards:app-install": { revenuePerCustomerInr: 70, variableCostPerCustomerInr: 7, contributionMarginPct: 58 },
   "credit-cards:app-install-open": { revenuePerCustomerInr: 95, variableCostPerCustomerInr: 9, contributionMarginPct: 58 },
-  "credit-cards:app-lead-form": { revenuePerCustomerInr: 900, variableCostPerCustomerInr: 65, contributionMarginPct: 62 },
+  "credit-cards:app-lead-form": { revenuePerCustomerInr: 4200, variableCostPerCustomerInr: 330, contributionMarginPct: 70 },
   "investments:app-install": { revenuePerCustomerInr: 90, variableCostPerCustomerInr: 9, contributionMarginPct: 52 },
   "investments:app-install-open": { revenuePerCustomerInr: 120, variableCostPerCustomerInr: 11, contributionMarginPct: 52 },
-  "investments:app-lead-form": { revenuePerCustomerInr: 1200, variableCostPerCustomerInr: 80, contributionMarginPct: 55 },
+  "investments:app-investment": { revenuePerCustomerInr: 4200, variableCostPerCustomerInr: 280, contributionMarginPct: 60 },
   "investments:in-app-purchase": { revenuePerCustomerInr: 2500, variableCostPerCustomerInr: 150, contributionMarginPct: 55 },
 
   "news:app-install": { revenuePerCustomerInr: 40, variableCostPerCustomerInr: 5, contributionMarginPct: 50 },
