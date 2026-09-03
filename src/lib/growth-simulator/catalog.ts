@@ -27,30 +27,44 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const FUNNEL_TEMPLATES: Record<string, FunnelTemplate> = {
+  // Approval and disbursal are NOT adjacent in a real digital-lending flow —
+  // RBI's digital lending guidelines require KYC/document verification
+  // before money moves, and it's routinely the single biggest source of
+  // post-approval drop-off (documentation friction, not a credit decision).
+  // Folding it into "disbursalRate" hid that bottleneck from the Constraint
+  // Engine entirely. Split out as its own stage — see kycVerificationRate's
+  // derivation for how the old combined rate was decomposed into two.
   "website-lead-form-lending": {
     id: "website-lead-form-lending",
-    label: "Lead → Application → Approval → Disbursal",
+    label: "Lead → Application → Approval → KYC → Disbursal",
     stages: [
       { id: "leads", label: "Leads", metricId: "landingCvr" },
       { id: "qualified", label: "Qualified leads", metricId: "qualificationRate" },
       { id: "approved", label: "Approved", metricId: "approvalRate" },
+      { id: "kyc-verified", label: "KYC verified", metricId: "kycVerificationRate" },
       { id: "funded", label: "Funded customers", metricId: "disbursalRate" },
     ],
     valueStageId: "funded",
     hasRevenue: true,
     valueLabel: "Funded customers",
   },
+  // Same principle for investments: an "account opened" is not a customer
+  // yet — SEBI/CDSL have repeatedly flagged how many opened demat accounts
+  // never fund a single trade. Continues past KYC into actually selecting
+  // a plan and completing a funded investment, the real revenue event.
   "website-lead-form-investment": {
     id: "website-lead-form-investment",
-    label: "Lead → Qualification → Account Opened",
+    label: "Lead → Qualification → KYC → Plan Selected → Invested",
     stages: [
       { id: "leads", label: "Leads", metricId: "investLeadCvr" },
       { id: "qualified", label: "Qualified leads", metricId: "investQualificationRate" },
-      { id: "converted", label: "Accounts opened", metricId: "investConversionRate" },
+      { id: "kyc-verified", label: "KYC verified", metricId: "investKycVerificationRate" },
+      { id: "plan-selected", label: "Investment plan selected", metricId: "investPlanSelectionRate" },
+      { id: "invested", label: "Funded investors", metricId: "investCompletionRate" },
     ],
-    valueStageId: "converted",
+    valueStageId: "invested",
     hasRevenue: true,
-    valueLabel: "Accounts opened",
+    valueLabel: "Funded investors",
   },
   "app-install": {
     id: "app-install",
