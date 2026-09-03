@@ -31,7 +31,13 @@ const ECONOMICS_DEFAULTS: Partial<Record<`${IndustryId}:${GoalId}`, EconomicsDef
   "emi-calculator:website-lead-form": { revenuePerCustomerInr: 5500, variableCostPerCustomerInr: 400, contributionMarginPct: 68 },
   "epf:website-lead-form": { revenuePerCustomerInr: 2500, variableCostPerCustomerInr: 300, contributionMarginPct: 65 },
   "credit-cards:website-lead-form": { revenuePerCustomerInr: 4500, variableCostPerCustomerInr: 350, contributionMarginPct: 72 },
-  "investments:website-lead-form": { revenuePerCustomerInr: 3200, variableCostPerCustomerInr: 250, contributionMarginPct: 60 },
+  // Goal renamed from "website-lead-form" to "website-investment" — the
+  // value stage moved from "account opened" to an actual funded investment
+  // (see catalog.ts), a materially stronger event, so this is nudged up
+  // from the old account-opening-era figure rather than left stale. Still
+  // an assumption, not a benchmark — replace with the client's real AUM
+  // economics on day one.
+  "investments:website-investment": { revenuePerCustomerInr: 4500, variableCostPerCustomerInr: 300, contributionMarginPct: 62 },
   "investments:website-registration": { revenuePerCustomerInr: 2000, variableCostPerCustomerInr: 150, contributionMarginPct: 55 },
   "emi-calculator:use-calculator": { revenuePerCustomerInr: 80, variableCostPerCustomerInr: 10, contributionMarginPct: 55 },
   "personal-loans:click-to-call": { revenuePerCustomerInr: 6800, variableCostPerCustomerInr: 550, contributionMarginPct: 68 },

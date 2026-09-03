@@ -209,8 +209,21 @@ export const GOALS: Record<string, GoalDefinition> = {
   "website-lead-form": {
     id: "website-lead-form",
     label: "Website Lead Form",
-    description: "A visitor fills a lead/application form on your website.",
-    funnelTemplateId: "website-lead-form-lending", // overridden per-industry in resolveFunnelTemplate
+    description:
+      "A visitor fills a lead/application form on your website — the funnel then tracks it through approval, KYC verification, and disbursal to a funded customer.",
+    funnelTemplateId: "website-lead-form-lending",
+  },
+  // Investments gets its own goal instead of sharing "Website Lead Form" —
+  // the literal thing a campaign is bought against here isn't a generic
+  // form-fill, it's account opening through KYC to an actual funded
+  // investment, and naming it that way in the goal picker itself (not just
+  // buried in the funnel stages once you're in) is what a campaign manager
+  // planning this actually expects to see.
+  "website-investment": {
+    id: "website-investment",
+    label: "Open & Fund an Investment",
+    description: "Drive a lead through KYC verification and plan selection to a completed, funded investment.",
+    funnelTemplateId: "website-lead-form-investment",
   },
   "app-install": {
     id: "app-install",
@@ -293,12 +306,12 @@ export function isGoogleUacGoal(goalId: string): boolean {
   return GOOGLE_UAC_GOAL_IDS.has(goalId);
 }
 
-/** Per-industry override: "Website Lead Form" resolves to a different template for lending vs. investment products. */
 export function resolveFunnelTemplate(industryId: string, goalId: string): FunnelTemplate {
+  if (goalId === "website-investment") {
+    return FUNNEL_TEMPLATES["website-lead-form-investment"];
+  }
   if (goalId === "website-lead-form") {
-    return industryId === "investments"
-      ? FUNNEL_TEMPLATES["website-lead-form-investment"]
-      : FUNNEL_TEMPLATES["website-lead-form-lending"];
+    return FUNNEL_TEMPLATES["website-lead-form-lending"];
   }
   // "Register on Website" — Investments keeps the fintech-flavoured
   // registration benchmark (account-opening intent); every other industry
@@ -363,7 +376,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     label: "Investments",
     group: "finance",
     defaultPlatform: "website",
-    websiteGoalIds: ["website-lead-form", "website-registration", "website-purchase", "website-click"],
+    websiteGoalIds: ["website-investment", "website-registration", "website-purchase", "website-click"],
     appGoalIds: [...APP_GOALS_WITH_PURCHASE],
   },
   {
@@ -446,19 +459,35 @@ const GOOGLE_SPLIT_CHANNEL_IDS: ChannelId[] = ["google-search", "google-display"
 
 /**
  * Channels visible for the current goal:
- * - ASO only for goals that acquire a new app user via the store listing.
- * - Google shows either the Search/Display/YouTube split (website-style
- *   buying) OR the single App Campaigns channel (app-style buying),
- *   never both — see isGoogleUacGoal().
+ * - ASO only for goals that acquire a new app user via the store listing —
+ *   re-engagement targets someone who already has the app, so there's no
+ *   store-listing funnel to run ASO against for it either.
+ * - SEO (organic WEB search) is hidden for every app-store-flavoured goal
+ *   (install, install+open, in-app lead form, in-app purchase,
+ *   re-engagement) — organic web ranking doesn't drive app installs or
+ *   reopen an already-installed app; that's ASO's job, not SEO's. This is
+ *   independent of the Google split/UAC choice below: buying Display and
+ *   YouTube manually for an app-install goal doesn't turn on organic web
+ *   search as a source of installs.
+ * - Google defaults to the single blended App Campaigns channel for an
+ *   app-acquisition goal, but that's a preference, not a hard rule — many
+ *   advertisers also buy Display and YouTube for app installs as separate,
+ *   manually-managed line items (video ads driving installs, Display
+ *   retargeting), rather than only the auto-placed blended product. So for
+ *   a UAC-eligible goal the caller can pass `preferSplit: true` to get the
+ *   Search/Display/YouTube split instead — see the buying-mode toggle in
+ *   GrowthSimulator. For a non-UAC (website-style) goal the split is the
+ *   only option regardless of this flag; isGoogleUacGoal() still decides
+ *   that.
  * - LinkedIn is modelled as a website-style channel (its own CPC/CTR into
- *   the shared funnel, like Search) — it isn't sold as an app-install
- *   campaign in this tool, so it follows the same website-vs-UAC gate as
- *   the Google split.
+ *   the shared funnel, like Search) — it follows the same split-vs-UAC
+ *   gate as Google, so it appears whenever the split does.
  */
-export function channelsForGoal(goalId: string): ChannelMeta[] {
-  const uac = isGoogleUacGoal(goalId);
+export function channelsForGoal(goalId: string, preferSplit = false): ChannelMeta[] {
+  const uac = isGoogleUacGoal(goalId) && !preferSplit;
   return CHANNELS.filter((c) => {
     if (c.appOnly && !APP_ACQUISITION_GOAL_IDS.has(goalId)) return false;
+    if (c.id === "seo" && isGoogleUacGoal(goalId)) return false;
     if (c.id === "google-uac" && !uac) return false;
     if (GOOGLE_SPLIT_CHANNEL_IDS.includes(c.id) && uac) return false;
     if (c.id === "linkedin" && uac) return false;
