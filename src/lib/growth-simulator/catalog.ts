@@ -94,6 +94,45 @@ export const FUNNEL_TEMPLATES: Record<string, FunnelTemplate> = {
     hasRevenue: true,
     valueLabel: "In-app leads",
   },
+  // Same KYC gap that existed on the website side (see website-lead-form-
+  // lending / -investment above) also existed here — the App platform's
+  // "app-lead-form" stopped at phone-verified registration for every
+  // industry, lending included, with no approval/KYC/disbursal after it.
+  // These two mirror the website versions exactly, reusing the same
+  // approvalRate/kycVerificationRate/disbursalRate and invest* benchmarks
+  // (the underwriting and KYC process doesn't change by acquisition
+  // channel) — only the entry stages differ (store visit + install instead
+  // of a landing-page click).
+  "app-lead-form-lending": {
+    id: "app-lead-form-lending",
+    label: "Store Visit → Install → Lead → Approved → KYC → Disbursal",
+    stages: [
+      { id: "store-visit", label: "Store listing visits", metricId: "storeListingVisitRate" },
+      { id: "install", label: "Installs", metricId: "installRate" },
+      { id: "registration", label: "In-app lead form completed (phone verified)", metricId: "registrationRate" },
+      { id: "approved", label: "Approved", metricId: "approvalRate" },
+      { id: "kyc-verified", label: "KYC verified", metricId: "kycVerificationRate" },
+      { id: "funded", label: "Funded customers", metricId: "disbursalRate" },
+    ],
+    valueStageId: "funded",
+    hasRevenue: true,
+    valueLabel: "Funded customers",
+  },
+  "app-lead-form-investment": {
+    id: "app-lead-form-investment",
+    label: "Store Visit → Install → Lead → KYC → Plan Selected → Invested",
+    stages: [
+      { id: "store-visit", label: "Store listing visits", metricId: "storeListingVisitRate" },
+      { id: "install", label: "Installs", metricId: "installRate" },
+      { id: "registration", label: "In-app lead form completed (phone verified)", metricId: "registrationRate" },
+      { id: "kyc-verified", label: "KYC verified", metricId: "investKycVerificationRate" },
+      { id: "plan-selected", label: "Investment plan selected", metricId: "investPlanSelectionRate" },
+      { id: "invested", label: "Funded investors", metricId: "investCompletionRate" },
+    ],
+    valueStageId: "invested",
+    hasRevenue: true,
+    valueLabel: "Funded investors",
+  },
   "website-registration": {
     id: "website-registration",
     label: "Engaged Visit → Registration → Activation",
@@ -234,8 +273,19 @@ export const GOALS: Record<string, GoalDefinition> = {
   "app-lead-form": {
     id: "app-lead-form",
     label: "In-App Lead Form",
-    description: "Drive installs through to a lead form/registration completed inside the app.",
+    description:
+      "Drive installs through to a lead form/registration completed inside the app — for lending industries, the funnel then tracks it through approval, KYC verification, and disbursal to a funded customer.",
     funnelTemplateId: "app-lead-form",
+  },
+  // Same reasoning as "website-investment" above — Investments gets its
+  // own app-platform goal instead of the generic "In-App Lead Form",
+  // naming the real thing being bought: installs through KYC to a funded
+  // investment, not a generic in-app form-fill.
+  "app-investment": {
+    id: "app-investment",
+    label: "Open & Fund an Investment (In-App)",
+    description: "Drive installs through KYC verification and plan selection to a completed, funded investment.",
+    funnelTemplateId: "app-lead-form-investment",
   },
   "website-registration": {
     id: "website-registration",
@@ -292,7 +342,16 @@ export const GOALS: Record<string, GoalDefinition> = {
  * ASO's visibility (re-engagement targets people who already have the app,
  * so it has no store-listing funnel and doesn't belong on the ASO tab).
  */
-const APP_ACQUISITION_GOAL_IDS = new Set(["app-install", "app-install-open", "app-lead-form", "in-app-purchase"]);
+const APP_ACQUISITION_GOAL_IDS = new Set([
+  "app-install",
+  "app-install-open",
+  "app-lead-form",
+  "app-investment",
+  "in-app-purchase",
+]);
+
+/** Industries whose "app-lead-form" goal routes through the lending KYC/disbursal chain instead of the generic one. */
+const LENDING_APP_KYC_INDUSTRY_IDS = new Set(["personal-loans", "emi-calculator", "epf", "credit-cards"]);
 
 /**
  * Goals Google sells as an App Campaign (formerly UAC) rather than as
@@ -310,8 +369,21 @@ export function resolveFunnelTemplate(industryId: string, goalId: string): Funne
   if (goalId === "website-investment") {
     return FUNNEL_TEMPLATES["website-lead-form-investment"];
   }
+  if (goalId === "app-investment") {
+    return FUNNEL_TEMPLATES["app-lead-form-investment"];
+  }
   if (goalId === "website-lead-form") {
     return FUNNEL_TEMPLATES["website-lead-form-lending"];
+  }
+  // App platform's in-app lead form has the same KYC gap the website
+  // version had — for the pure-lending industries it routes through
+  // approval/KYC/disbursal instead of stopping at phone-verified
+  // registration. Investments never reaches this branch — it has its own
+  // "app-investment" goal instead (handled above). Every other industry
+  // (News, Social, Business, Travel, Events) keeps the original generic
+  // template, unaffected.
+  if (goalId === "app-lead-form" && LENDING_APP_KYC_INDUSTRY_IDS.has(industryId)) {
+    return FUNNEL_TEMPLATES["app-lead-form-lending"];
   }
   // "Register on Website" — Investments keeps the fintech-flavoured
   // registration benchmark (account-opening intent); every other industry
@@ -377,7 +449,7 @@ export const INDUSTRIES: IndustryDefinition[] = [
     group: "finance",
     defaultPlatform: "website",
     websiteGoalIds: ["website-investment", "website-registration", "website-purchase", "website-click"],
-    appGoalIds: [...APP_GOALS_WITH_PURCHASE],
+    appGoalIds: ["app-install", "app-install-open", "app-investment", "in-app-purchase", "app-reengagement"],
   },
   {
     id: "news",
